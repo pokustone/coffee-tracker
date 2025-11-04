@@ -1,1215 +1,646 @@
 <!DOCTYPE html>
 <html lang="cs">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="mobile-web-app-capable" content="yes">
-  <title>Kávová evidence</title>
-  <style>
-    :root {
-  /* Primitive Color Tokens */
-  --color-white: rgba(255, 255, 255, 1);
-  --color-black: rgba(0, 0, 0, 1);
-  --color-cream-50: rgba(252, 252, 249, 1);
-  --color-cream-100: rgba(255, 255, 253, 1);
-  --color-gray-200: rgba(245, 245, 245, 1);
-  --color-gray-300: rgba(167, 169, 169, 1);
-  --color-gray-400: rgba(119, 124, 124, 1);
-  --color-slate-500: rgba(98, 108, 113, 1);
-  --color-brown-600: rgba(94, 82, 64, 1);
-  --color-charcoal-700: rgba(31, 33, 33, 1);
-  --color-charcoal-800: rgba(38, 40, 40, 1);
-  --color-slate-900: rgba(19, 52, 59, 1);
-  --color-teal-300: rgba(50, 184, 198, 1);
-  --color-teal-400: rgba(45, 166, 178, 1);
-  --color-teal-500: rgba(33, 128, 141, 1);
-  --color-teal-600: rgba(29, 116, 128, 1);
-  --color-teal-700: rgba(26, 104, 115, 1);
-  --color-teal-800: rgba(41, 150, 161, 1);
-  --color-red-400: rgba(255, 84, 89, 1);
-  --color-red-500: rgba(192, 21, 47, 1);
-  --color-orange-400: rgba(230, 129, 97, 1);
-  --color-orange-500: rgba(168, 75, 47, 1);
-
-  /* RGB versions for opacity control */
-  --color-brown-600-rgb: 94, 82, 64;
-  --color-teal-500-rgb: 33, 128, 141;
-  --color-slate-900-rgb: 19, 52, 59;
-  --color-slate-500-rgb: 98, 108, 113;
-  --color-red-500-rgb: 192, 21, 47;
-  --color-red-400-rgb: 255, 84, 89;
-  --color-orange-500-rgb: 168, 75, 47;
-  --color-orange-400-rgb: 230, 129, 97;
-
-  /* Background color tokens (Light Mode) */
-  --color-bg-1: rgba(59, 130, 246, 0.08);
-  --color-bg-2: rgba(245, 158, 11, 0.08);
-  --color-bg-3: rgba(34, 197, 94, 0.08);
-  --color-bg-4: rgba(239, 68, 68, 0.08);
-  --color-bg-5: rgba(147, 51, 234, 0.08);
-  --color-bg-6: rgba(249, 115, 22, 0.08);
-  --color-bg-7: rgba(236, 72, 153, 0.08);
-  --color-bg-8: rgba(6, 182, 212, 0.08);
-
-  /* Semantic Color Tokens (Light Mode) */
-  --color-background: var(--color-cream-50);
-  --color-surface: var(--color-cream-100);
-  --color-text: var(--color-slate-900);
-  --color-text-secondary: var(--color-slate-500);
-  --color-primary: var(--color-teal-500);
-  --color-primary-hover: var(--color-teal-600);
-  --color-primary-active: var(--color-teal-700);
-  --color-secondary: rgba(var(--color-brown-600-rgb), 0.12);
-  --color-secondary-hover: rgba(var(--color-brown-600-rgb), 0.2);
-  --color-secondary-active: rgba(var(--color-brown-600-rgb), 0.25);
-  --color-border: rgba(var(--color-brown-600-rgb), 0.2);
-  --color-btn-primary-text: var(--color-cream-50);
-  --color-card-border: rgba(var(--color-brown-600-rgb), 0.12);
-  --color-card-border-inner: rgba(var(--color-brown-600-rgb), 0.12);
-  --color-error: var(--color-red-500);
-  --color-success: var(--color-teal-500);
-  --color-warning: var(--color-orange-500);
-  --color-info: var(--color-slate-500);
-  --color-focus-ring: rgba(var(--color-teal-500-rgb), 0.4);
-  --color-select-caret: rgba(var(--color-slate-900-rgb), 0.8);
-
-  /* Common style patterns */
-  --focus-ring: 0 0 0 3px var(--color-focus-ring);
-  --focus-outline: 2px solid var(--color-primary);
-  --status-bg-opacity: 0.15;
-  --status-border-opacity: 0.25;
-
-  /* RGB versions for opacity control */
-  --color-success-rgb: 33, 128, 141;
-  --color-error-rgb: 192, 21, 47;
-  --color-warning-rgb: 168, 75, 47;
-  --color-info-rgb: 98, 108, 113;
-
-  /* Typography */
-  --font-family-base: "FKGroteskNeue", "Geist", "Inter", -apple-system,
-    BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-family-mono: "Berkeley Mono", ui-monospace, SFMono-Regular, Menlo,
-    Monaco, Consolas, monospace;
-  --font-size-xs: 11px;
-  --font-size-sm: 12px;
-  --font-size-base: 14px;
-  --font-size-md: 14px;
-  --font-size-lg: 16px;
-  --font-size-xl: 18px;
-  --font-size-2xl: 20px;
-  --font-size-3xl: 24px;
-  --font-size-4xl: 30px;
-  --font-weight-normal: 400;
-  --font-weight-medium: 500;
-  --font-weight-semibold: 550;
-  --font-weight-bold: 600;
-  --line-height-tight: 1.2;
-  --line-height-normal: 1.5;
-  --letter-spacing-tight: -0.01em;
-
-  /* Spacing */
-  --space-0: 0;
-  --space-1: 1px;
-  --space-2: 2px;
-  --space-4: 4px;
-  --space-6: 6px;
-  --space-8: 8px;
-  --space-10: 10px;
-  --space-12: 12px;
-  --space-16: 16px;
-  --space-20: 20px;
-  --space-24: 24px;
-  --space-32: 32px;
-
-  /* Border Radius */
-  --radius-sm: 6px;
-  --radius-base: 8px;
-  --radius-md: 10px;
-  --radius-lg: 12px;
-  --radius-full: 9999px;
-
-  /* Shadows */
-  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.02);
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.04),
-    0 2px 4px -1px rgba(0, 0, 0, 0.02);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.04),
-    0 4px 6px -2px rgba(0, 0, 0, 0.02);
-  --shadow-inset-sm: inset 0 1px 0 rgba(255, 255, 255, 0.15),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.03);
-
-  /* Animation */
-  --duration-fast: 150ms;
-  --duration-normal: 250ms;
-  --ease-standard: cubic-bezier(0.16, 1, 0.3, 1);
-
-  /* Layout */
-  --container-sm: 640px;
-  --container-md: 768px;
-  --container-lg: 1024px;
-  --container-xl: 1280px;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-gray-400-rgb: 119, 124, 124;
-    --color-teal-300-rgb: 50, 184, 198;
-    --color-gray-300-rgb: 167, 169, 169;
-    --color-gray-200-rgb: 245, 245, 245;
-
-    --color-bg-1: rgba(29, 78, 216, 0.15);
-    --color-bg-2: rgba(180, 83, 9, 0.15);
-    --color-bg-3: rgba(21, 128, 61, 0.15);
-    --color-bg-4: rgba(185, 28, 28, 0.15);
-    --color-bg-5: rgba(107, 33, 168, 0.15);
-    --color-bg-6: rgba(194, 65, 12, 0.15);
-    --color-bg-7: rgba(190, 24, 93, 0.15);
-    --color-bg-8: rgba(8, 145, 178, 0.15);
-
-    --color-background: var(--color-charcoal-700);
-    --color-surface: var(--color-charcoal-800);
-    --color-text: var(--color-gray-200);
-    --color-text-secondary: rgba(var(--color-gray-300-rgb), 0.7);
-    --color-primary: var(--color-teal-300);
-    --color-primary-hover: var(--color-teal-400);
-    --color-primary-active: var(--color-teal-800);
-    --color-secondary: rgba(var(--color-gray-400-rgb), 0.15);
-    --color-secondary-hover: rgba(var(--color-gray-400-rgb), 0.25);
-    --color-secondary-active: rgba(var(--color-gray-400-rgb), 0.3);
-    --color-border: rgba(var(--color-gray-400-rgb), 0.3);
-    --color-error: var(--color-red-400);
-    --color-success: var(--color-teal-300);
-    --color-warning: var(--color-orange-400);
-    --color-info: var(--color-gray-300);
-    --color-focus-ring: rgba(var(--color-teal-300-rgb), 0.4);
-    --color-btn-primary-text: var(--color-slate-900);
-    --color-card-border: rgba(var(--color-gray-400-rgb), 0.2);
-    --color-card-border-inner: rgba(var(--color-gray-400-rgb), 0.15);
-    --shadow-inset-sm: inset 0 1px 0 rgba(255, 255, 255, 0.1),
-      inset 0 -1px 0 rgba(0, 0, 0, 0.15);
-    --color-select-caret: rgba(var(--color-gray-200-rgb), 0.8);
-
-    --color-success-rgb: var(--color-teal-300-rgb);
-    --color-error-rgb: var(--color-red-400-rgb);
-    --color-warning-rgb: var(--color-orange-400-rgb);
-    --color-info-rgb: var(--color-gray-300-rgb);
-  }
-}
-
-@font-face {
-  font-family: 'FKGroteskNeue';
-  src: url('https://r2cdn.perplexity.ai/fonts/FKGroteskNeue.woff2')
-    format('woff2');
-}
-
-html {
-  font-size: var(--font-size-base);
-  font-family: var(--font-family-base);
-  line-height: var(--line-height-normal);
-  color: var(--color-text);
-  background-color: var(--color-background);
-  -webkit-font-smoothing: antialiased;
-  box-sizing: border-box;
-}
-
-body {
-  margin: 0;
-  padding: 0;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-}
-
-*,
-*::before,
-*::after {
-  box-sizing: inherit;
-}
-
-/* App Container */
-.app-container {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  padding: var(--space-16);
-  max-width: 600px;
-  margin: 0 auto;
-  width: 100%;
-}
-
-/* Header */
-.app-header {
-  text-align: center;
-  margin-bottom: var(--space-32);
-}
-
-.app-title {
-  font-size: var(--font-size-3xl);
-  font-weight: var(--font-weight-bold);
-  color: var(--color-text);
-  margin: 0 0 var(--space-8) 0;
-}
-
-.user-name {
-  font-size: var(--font-size-xl);
-  color: var(--color-text-secondary);
-  margin: 0;
-}
-
-/* Card */
-.card {
-  background-color: var(--color-surface);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--color-card-border);
-  box-shadow: var(--shadow-md);
-  padding: var(--space-24);
-  margin-bottom: var(--space-16);
-}
-
-/* Coffee Counter */
-.coffee-counter {
-  text-align: center;
-  margin-bottom: var(--space-32);
-}
-
-.counter-label {
-  font-size: var(--font-size-base);
-  color: var(--color-text-secondary);
-  margin-bottom: var(--space-8);
-}
-
-.counter-value {
-  font-size: 48px;
-  font-weight: var(--font-weight-bold);
-  color: var(--color-primary);
-  font-variant-numeric: tabular-nums;
-  line-height: 1;
-}
-
-.counter-unit {
-  font-size: var(--font-size-lg);
-  color: var(--color-text-secondary);
-  margin-top: var(--space-8);
-}
-
-/* Coffee Buttons */
-.coffee-buttons {
-  display: flex;
-  gap: var(--space-16);
-  margin-bottom: var(--space-24);
-}
-
-.coffee-button {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-8);
-  padding: var(--space-24);
-  background: var(--color-primary);
-  color: var(--color-btn-primary-text);
-  border: none;
-  border-radius: var(--radius-lg);
-  font-size: var(--font-size-4xl);
-  font-weight: var(--font-weight-semibold);
-  cursor: pointer;
-  transition: all var(--duration-normal) var(--ease-standard);
-  box-shadow: var(--shadow-sm);
-  min-height: 120px;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.coffee-button:hover:not(:disabled) {
-  background: var(--color-primary-hover);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-lg);
-}
-
-.coffee-button:active:not(:disabled) {
-  background: var(--color-primary-active);
-  transform: translateY(0);
-}
-
-.coffee-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.coffee-button:focus-visible {
-  outline: none;
-  box-shadow: var(--focus-ring), var(--shadow-sm);
-}
-
-.button-label {
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-}
-
-/* Payment Screen */
-.payment-screen {
-  text-align: center;
-}
-
-.payment-icon {
-  font-size: 64px;
-  margin-bottom: var(--space-24);
-}
-
-.payment-title {
-  font-size: var(--font-size-2xl);
-  font-weight: var(--font-weight-bold);
-  color: var(--color-text);
-  margin-bottom: var(--space-16);
-}
-
-.payment-amount {
-  font-size: 48px;
-  font-weight: var(--font-weight-bold);
-  color: var(--color-error);
-  margin-bottom: var(--space-8);
-  font-variant-numeric: tabular-nums;
-}
-
-.payment-month {
-  font-size: var(--font-size-base);
-  color: var(--color-text-secondary);
-  margin-bottom: var(--space-32);
-}
-
-.account-box {
-  background: var(--color-bg-2);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  padding: var(--space-20);
-  margin-bottom: var(--space-32);
-}
-
-.account-label {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
-  margin-bottom: var(--space-8);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.account-number {
-  font-size: var(--font-size-2xl);
-  font-weight: var(--font-weight-bold);
-  color: var(--color-text);
-  font-family: var(--font-family-mono);
-  font-variant-numeric: tabular-nums;
-}
-
-.paid-button {
-  width: 100%;
-  padding: var(--space-16) var(--space-24);
-  background: var(--color-success);
-  color: var(--color-btn-primary-text);
-  border: none;
-  border-radius: var(--radius-lg);
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-semibold);
-  cursor: pointer;
-  transition: all var(--duration-normal) var(--ease-standard);
-  min-height: 56px;
-  box-shadow: var(--shadow-sm);
-}
-
-.paid-button:hover:not(:disabled) {
-  background: var(--color-primary-hover);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-lg);
-}
-
-.paid-button:active:not(:disabled) {
-  transform: translateY(0);
-}
-
-.paid-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.paid-button:focus-visible {
-  outline: none;
-  box-shadow: var(--focus-ring), var(--shadow-sm);
-}
-
-/* Loading Spinner */
-.loading-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-16);
-  padding: var(--space-32);
-  text-align: center;
-}
-
-.spinner {
-  width: 48px;
-  height: 48px;
-  border: 4px solid var(--color-secondary);
-  border-top-color: var(--color-primary);
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-.loading-text {
-  font-size: var(--font-size-base);
-  color: var(--color-text-secondary);
-}
-
-/* Error Message */
-#errorContainer {
-  margin-bottom: var(--space-16);
-}
-
-.error-message {
-  background: rgba(var(--color-error-rgb), 0.1);
-  border: 1px solid rgba(var(--color-error-rgb), 0.3);
-  border-radius: var(--radius-md);
-  padding: var(--space-16);
-  color: var(--color-error);
-  text-align: center;
-  margin-bottom: var(--space-12);
-  font-weight: var(--font-weight-medium);
-}
-
-.error-details {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  padding: var(--space-16);
-  margin-bottom: var(--space-12);
-}
-
-.error-details-header {
-  margin-bottom: var(--space-12);
-}
-
-.btn-link {
-  background: none;
-  border: none;
-  color: var(--color-primary);
-  cursor: pointer;
-  font-size: var(--font-size-sm);
-  text-decoration: underline;
-  padding: 0;
-  font-weight: var(--font-weight-medium);
-}
-
-.btn-link:hover {
-  color: var(--color-primary-hover);
-}
-
-.error-details-content {
-  margin-top: var(--space-12);
-}
-
-.detail-item {
-  margin-bottom: var(--space-12);
-  padding-bottom: var(--space-12);
-  border-bottom: 1px solid var(--color-card-border-inner);
-}
-
-.detail-item:last-child {
-  border-bottom: none;
-  margin-bottom: 0;
-  padding-bottom: 0;
-}
-
-.detail-label {
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text-secondary);
-  margin-bottom: var(--space-4);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.detail-value {
-  font-size: var(--font-size-sm);
-  color: var(--color-text);
-  word-break: break-all;
-  font-family: var(--font-family-mono);
-  background: var(--color-bg-1);
-  padding: var(--space-8);
-  border-radius: var(--radius-sm);
-}
-
-pre.detail-value {
-  white-space: pre-wrap;
-  margin: 0;
-  max-height: 200px;
-  overflow-y: auto;
-}
-
-.error-actions {
-  display: flex;
-  gap: var(--space-12);
-}
-
-.error-actions .btn {
-  flex: 1;
-  padding: var(--space-12) var(--space-16);
-  border-radius: var(--radius-md);
-  font-size: var(--font-size-base);
-  font-weight: var(--font-weight-semibold);
-  cursor: pointer;
-  transition: all var(--duration-normal) var(--ease-standard);
-  border: none;
-}
-
-.btn--primary {
-  background: var(--color-primary);
-  color: var(--color-btn-primary-text);
-}
-
-.btn--primary:hover:not(:disabled) {
-  background: var(--color-primary-hover);
-}
-
-.btn--primary:active:not(:disabled) {
-  background: var(--color-primary-active);
-}
-
-.btn--secondary {
-  background: var(--color-secondary);
-  color: var(--color-text);
-  border: 1px solid var(--color-border);
-}
-
-.btn--secondary:hover:not(:disabled) {
-  background: var(--color-secondary-hover);
-}
-
-.btn--secondary:active:not(:disabled) {
-  background: var(--color-secondary-active);
-}
-
-.btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-/* Success Message */
-.success-message {
-  background: rgba(var(--color-success-rgb), 0.1);
-  border: 1px solid rgba(var(--color-success-rgb), 0.3);
-  border-radius: var(--radius-md);
-  padding: var(--space-16);
-  color: var(--color-success);
-  text-align: center;
-  margin-bottom: var(--space-16);
-}
-
-/* Hidden */
-.hidden {
-  display: none !important;
-}
-
-/* Responsive */
-@media (min-width: 768px) {
-  .app-container {
-    padding: var(--space-32);
-  }
-  
-  .coffee-button {
-    min-height: 140px;
-  }
-}
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Evidence kávy</title>
+    <meta name="description" content="Aplikace pro evidenci spotřebované kávy">
+    <meta name="theme-color" content="#21808D">
+    <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIkV2aWRlbmNlIGvDoXZ5IiwKICAic2hvcnRfbmFtZSI6ICJLw6F2YSIsCiAgInN0YXJ0X3VybCI6ICIvIiwKICAiZGlzcGxheSI6ICJzdGFuZGFsb25lIiwKICAiYmFja2dyb3VuZF9jb2xvciI6ICIjRkNGQ0Y5IiwKICAidGhlbWVfY29sb3IiOiAiIzIxODA4RCIsCiAgImljb25zIjogWwogICAgewogICAgICAic3JjIjogImRhdGE6aW1hZ2Uvc3ZnK3htbCwlM0NzdmclMjB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnJTIwd2lkdGg9JzE5MiclMjBoZWlnaHQ9JzE5MiclM0UlM0NyZWN0JTIwd2lkdGg9JzE5MiclMjBoZWlnaHQ9JzE5MiclMjBmaWxsPSclMjMyMTgwOEQnLyUzRSUzQ3RleHQlMjB4PSc1MCUyNSclMjB5PSc1MCUyNSclMjBmb250LXNpemU9JzEwMCclMjBkb21pbmFudC1iYXNlbGluZT0nbWlkZGxlJyUyMHRleHQtYW5jaG9yPSdtaWRkbGUnJTIwZmlsbD0nJTIzRkZGJyUzRSVFMiU5OCU5NSUzQy90ZXh0JTNFJTNDL3N2ZyUzRSIsCiAgICAgICJzaXplcyI6ICIxOTJ4MTkyIiwKICAgICAgInR5cGUiOiAiaW1hZ2Uvc3ZnK3htbCIKICAgIH0sCiAgICB7CiAgICAgICJzcmMiOiAiZGF0YTppbWFnZS9zdmcreG1sLCUzQ3N2ZyUyMHhtbG5zPSdodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyclMjB3aWR0aD0nNTEyJyUyMGhlaWdodD0nNTEyJyUzRSUzQ3JlY3QlMjB3aWR0aD0nNTEyJyUyMGhlaWdodD0nNTEyJyUyMGZpbGw9JyUyMzIxODA4RCcvJTNFJTNDdGV4dCUyMHg9JzUwJTI1JyUyMHk9JzUwJTI1JyUyMGZvbnQtc2l6ZT0nMzAwJyUyMGRvbWluYW50LWJhc2VsaW5lPSdtaWRkbGUnJTIwdGV4dC1hbmNob3I9J21pZGRsZSclMjBmaWxsPSclMjNGRkYnJTNFJUUyJTk4JTk1JTNDL3RleHQlM0UlM0Mvc3ZnJTNFIiwKICAgICAgInNpemVzIjogIjUxMng1MTIiLAogICAgICAidHlwZSI6ICJpbWFnZS9zdmcreG1sIgogICAgfQogIF0KfQ==">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Crect width='180' height='180' fill='%2321808D'/%3E%3Ctext x='50%25' y='50%25' font-size='90' dominant-baseline='middle' text-anchor='middle' fill='%23FFF'%3E☕%3C/text%3E%3C/svg%3E">
+    <style>
+        :root {
+            --color-cream-50: rgba(252, 252, 249, 1);
+            --color-cream-100: rgba(255, 255, 253, 1);
+            --color-gray-200: rgba(245, 245, 245, 1);
+            --color-gray-300: rgba(167, 169, 169, 1);
+            --color-slate-500: rgba(98, 108, 113, 1);
+            --color-slate-900: rgba(19, 52, 59, 1);
+            --color-teal-300: rgba(50, 184, 198, 1);
+            --color-teal-500: rgba(33, 128, 141, 1);
+            --color-teal-600: rgba(29, 116, 128, 1);
+            --color-teal-700: rgba(26, 104, 115, 1);
+            --color-charcoal-700: rgba(31, 33, 33, 1);
+            --color-charcoal-800: rgba(38, 40, 40, 1);
+            --color-brown-600-rgb: 94, 82, 64;
+            --color-teal-500-rgb: 33, 128, 141;
+            --color-gray-400-rgb: 119, 124, 124;
+            --color-teal-300-rgb: 50, 184, 198;
+
+            --color-background: var(--color-cream-50);
+            --color-surface: var(--color-cream-100);
+            --color-text: var(--color-slate-900);
+            --color-text-secondary: var(--color-slate-500);
+            --color-primary: var(--color-teal-500);
+            --color-primary-hover: var(--color-teal-600);
+            --color-primary-active: var(--color-teal-700);
+            --color-secondary: rgba(var(--color-brown-600-rgb), 0.12);
+            --color-secondary-hover: rgba(var(--color-brown-600-rgb), 0.2);
+            --color-border: rgba(var(--color-brown-600-rgb), 0.2);
+            --color-btn-primary-text: var(--color-cream-50);
+            --color-card-border: rgba(var(--color-brown-600-rgb), 0.12);
+            
+            --font-family-base: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            --space-8: 8px;
+            --space-12: 12px;
+            --space-16: 16px;
+            --space-20: 20px;
+            --space-24: 24px;
+            --space-32: 32px;
+            --radius-base: 8px;
+            --radius-lg: 12px;
+            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.04), 0 2px 4px -1px rgba(0, 0, 0, 0.02);
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --color-background: var(--color-charcoal-700);
+                --color-surface: var(--color-charcoal-800);
+                --color-text: var(--color-gray-200);
+                --color-text-secondary: rgba(167, 169, 169, 0.7);
+                --color-primary: var(--color-teal-300);
+                --color-primary-hover: rgba(50, 184, 198, 0.9);
+                --color-primary-active: rgba(50, 184, 198, 0.8);
+                --color-secondary: rgba(var(--color-gray-400-rgb), 0.15);
+                --color-secondary-hover: rgba(var(--color-gray-400-rgb), 0.25);
+                --color-border: rgba(var(--color-gray-400-rgb), 0.3);
+                --color-card-border: rgba(var(--color-gray-400-rgb), 0.2);
+                --color-btn-primary-text: var(--color-slate-900);
+            }
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html {
+            font-family: var(--font-family-base);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        body {
+            background: var(--color-background);
+            color: var(--color-text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: var(--space-20);
+            flex: 1;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: var(--space-32);
+            padding-top: var(--space-20);
+        }
+
+        .header h1 {
+            font-size: 32px;
+            font-weight: 600;
+            margin-bottom: var(--space-8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: var(--space-12);
+        }
+
+        .card {
+            background: var(--color-surface);
+            border: 1px solid var(--color-card-border);
+            border-radius: var(--radius-lg);
+            padding: var(--space-24);
+            margin-bottom: var(--space-20);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--space-16);
+            margin-bottom: var(--space-24);
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            color: var(--color-text-secondary);
+            margin-bottom: var(--space-8);
+        }
+
+        .stat-value {
+            font-size: 36px;
+            font-weight: 600;
+            color: var(--color-primary);
+        }
+
+        .buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--space-16);
+            margin-bottom: var(--space-24);
+        }
+
+        .btn {
+            padding: var(--space-20);
+            border: none;
+            border-radius: var(--radius-base);
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: var(--space-8);
+        }
+
+        .btn-primary {
+            background: var(--color-primary);
+            color: var(--color-btn-primary-text);
+        }
+
+        .btn-primary:hover {
+            background: var(--color-primary-hover);
+        }
+
+        .btn-primary:active {
+            background: var(--color-primary-active);
+            transform: scale(0.98);
+        }
+
+        .btn-secondary {
+            background: var(--color-secondary);
+            color: var(--color-text);
+        }
+
+        .btn-secondary:hover {
+            background: var(--color-secondary-hover);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .payment-section {
+            border-top: 1px solid var(--color-border);
+            padding-top: var(--space-24);
+            margin-top: var(--space-24);
+        }
+
+        .payment-info {
+            background: var(--color-secondary);
+            padding: var(--space-16);
+            border-radius: var(--radius-base);
+            margin-bottom: var(--space-16);
+        }
+
+        .payment-info p {
+            margin-bottom: var(--space-8);
+            font-size: 14px;
+        }
+
+        .payment-info strong {
+            color: var(--color-primary);
+            font-size: 18px;
+        }
+
+        .bank-account {
+            font-family: monospace;
+            background: var(--color-surface);
+            padding: var(--space-8);
+            border-radius: var(--radius-base);
+            margin-top: var(--space-8);
+            font-size: 16px;
+        }
+
+        .status-message {
+            padding: var(--space-12);
+            border-radius: var(--radius-base);
+            margin-bottom: var(--space-16);
+            font-size: 14px;
+            text-align: center;
+        }
+
+        .status-success {
+            background: rgba(var(--color-teal-500-rgb), 0.15);
+            color: var(--color-primary);
+            border: 1px solid rgba(var(--color-teal-500-rgb), 0.25);
+        }
+
+        .status-error {
+            background: rgba(220, 38, 38, 0.15);
+            color: #dc2626;
+            border: 1px solid rgba(220, 38, 38, 0.25);
+        }
+
+        .loading {
+            text-align: center;
+            padding: var(--space-32);
+            color: var(--color-text-secondary);
+        }
+
+        .spinner {
+            border: 3px solid var(--color-secondary);
+            border-top: 3px solid var(--color-primary);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto var(--space-16);
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .footer {
+            text-align: center;
+            padding: var(--space-20);
+            color: var(--color-text-secondary);
+            font-size: 12px;
+        }
+
+        .setup-screen {
+            text-align: center;
+        }
+
+        .setup-screen h2 {
+            margin-bottom: var(--space-16);
+            font-size: 24px;
+        }
+
+        .setup-screen p {
+            color: var(--color-text-secondary);
+            margin-bottom: var(--space-24);
+            line-height: 1.6;
+        }
+
+        .setup-screen .btn {
+            max-width: 300px;
+            margin: 0 auto;
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: var(--space-16);
+            }
+            
+            .stat-value {
+                font-size: 28px;
+            }
+
+            .buttons {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
 </head>
 <body>
-  <div class="app-container">
-    <header class="app-header">
-      <h1 class="app-title">Kávová evidence</h1>
-      <p class="user-name" id="userName">Načítání...</p>
-    </header>
-
-    <!-- Loading State -->
-    <div id="loadingState" class="card loading-container">
-      <div class="spinner"></div>
-      <div class="loading-text">Načítání dat...</div>
-    </div>
-
-    <!-- Error Message -->
-    <div id="errorContainer" class="hidden">
-      <div id="errorMessage" class="error-message"></div>
-      <div id="errorDetails" class="error-details hidden">
-        <div class="error-details-header">
-          <button class="btn-link" id="toggleDetailsBtn">Zobrazit detaily</button>
+    <div class="container">
+        <div class="header">
+            <h1><span>☕</span> Evidence kávy</h1>
         </div>
-        <div id="errorDetailsContent" class="error-details-content hidden">
-          <div class="detail-item">
-            <div class="detail-label">URL:</div>
-            <div class="detail-value" id="errorUrl"></div>
-          </div>
-          <div class="detail-item">
-            <div class="detail-label">HTTP Status:</div>
-            <div class="detail-value" id="errorStatus"></div>
-          </div>
-          <div class="detail-item">
-            <div class="detail-label">Typ chyby:</div>
-            <div class="detail-value" id="errorType"></div>
-          </div>
-          <div class="detail-item">
-            <div class="detail-label">Čas pokusu:</div>
-            <div class="detail-value" id="errorTimestamp"></div>
-          </div>
-          <div class="detail-item">
-            <div class="detail-label">Odpověď serveru:</div>
-            <pre class="detail-value" id="errorResponse"></pre>
-          </div>
+
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <p>Načítání...</p>
         </div>
-      </div>
-      <div class="error-actions">
-        <button class="btn btn--secondary" id="testConnectionBtn">Otestovat připojení</button>
-        <button class="btn btn--primary" id="tryAgainBtn">Zkusit znovu</button>
-      </div>
+
+        <div id="setupScreen" class="card setup-screen" style="display: none;">
+            <h2>Konfigurace aplikace</h2>
+            <p>Pro použití této aplikace je potřeba nastavit Google Sheets API.</p>
+            <p><strong>Instrukce:</strong></p>
+            <ol style="text-align: left; max-width: 400px; margin: var(--space-24) auto; line-height: 1.8;">
+                <li>Vytvoř Google Sheet s listy "Coffee_Log" a "Settings"</li>
+                <li>V "Settings" přidej řádky: price_per_coffee, bank_account</li>
+                <li>Zapni Google Sheets API v Google Cloud Console</li>
+                <li>Vygeneruj API klíč a vlož ho do kódu (řádek s CONFIG)</li>
+                <li>Nastav správné SHEET_ID v kódu</li>
+            </ol>
+            <button class="btn btn-secondary" onclick="location.reload()">
+                Obnovit aplikaci
+            </button>
+        </div>
+
+        <div id="mainApp" style="display: none;">
+            <div id="statusMessage"></div>
+
+            <div class="card">
+                <div class="stats">
+                    <div class="stat-item">
+                        <div class="stat-label">Káv tento měsíc</div>
+                        <div class="stat-value" id="coffeeCount">0</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-label">K úhradě</div>
+                        <div class="stat-value" id="totalPrice">0 Kč</div>
+                    </div>
+                </div>
+
+                <div class="buttons">
+                    <button class="btn btn-primary" onclick="addCoffee(1)" id="btn1">
+                        <span>☕</span> +1 káva
+                    </button>
+                    <button class="btn btn-primary" onclick="addCoffee(2)" id="btn2">
+                        <span>☕☕</span> +2 kávy
+                    </button>
+                </div>
+
+                <div id="paymentSection" class="payment-section" style="display: none;">
+                    <div class="payment-info">
+                        <p>Celkem k úhradě za tento měsíc:</p>
+                        <p><strong id="paymentAmount">0 Kč</strong></p>
+                        <p style="margin-top: var(--space-16);">Číslo účtu:</p>
+                        <div class="bank-account" id="bankAccount">-</div>
+                    </div>
+                    <button class="btn btn-secondary" onclick="confirmPayment()" id="btnPaid">
+                        ✓ Zaplaceno
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <!-- Success Message -->
-    <div id="successMessage" class="success-message hidden"></div>
-
-    <!-- Normal State: Coffee Tracking -->
-    <div id="normalState" class="hidden">
-      <div class="card coffee-counter">
-        <div class="counter-label">Tento měsíc</div>
-        <div class="counter-value" id="coffeeCount">0</div>
-        <div class="counter-unit">káv</div>
-      </div>
-
-      <div class="coffee-buttons">
-        <button class="coffee-button" id="singleCoffeeBtn" aria-label="Přidat jednu kávu">
-          <span>☕</span>
-          <span class="button-label">+1</span>
-        </button>
-        <button class="coffee-button" id="doubleCoffeeBtn" aria-label="Přidat dvě kávy">
-          <span>☕☕</span>
-          <span class="button-label">+2</span>
-        </button>
-      </div>
+    <div class="footer">
+        Evidence kávy v1.0
     </div>
 
-    <!-- Payment Required State -->
-    <div id="paymentState" class="card payment-screen hidden">
-      <div class="payment-icon">☕</div>
-      <h2 class="payment-title">Minulý měsíc</h2>
-      <div class="payment-amount" id="debtAmount">0</div>
-      <div class="payment-month" id="debtMonth">káv</div>
-      
-      <div class="account-box">
-        <div class="account-label">Zaplaťte na účet</div>
-        <div class="account-number" id="bankAccount">Načítání...</div>
-      </div>
+    <script>
+        // ===== KONFIGURACE =====
+        const CONFIG = {
+            SHEET_ID: 'VÁŠ_GOOGLE_SHEET_ID_ZDE',
+            API_KEY: 'VÁŠ_API_KEY_ZDE',
+            SHEET_NAME_LOG: 'Coffee_Log',
+            SHEET_NAME_SETTINGS: 'Settings'
+        };
 
-      <button class="paid-button" id="paidBtn">✓ Zaplaceno</button>
-    </div>
-  </div>
-
-  <script>
-    // Configuration
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyx4b3n6YDTHSFScLWFoHSOx6qxa3FkFyKv6iP3xszeWqwHQNEx2-1x8ZiSqAdPdQ/exec';
-    
-    // Debug state
-    let lastError = {
-      message: '',
-      url: '',
-      status: '',
-      type: '',
-      timestamp: '',
-      response: ''
-    };
-    
-    // State
-    let userId = null;
-    let userData = null;
-    let bankAccount = null;
-
-    // DOM Elements
-    const elements = {
-      userName: document.getElementById('userName'),
-      loadingState: document.getElementById('loadingState'),
-      normalState: document.getElementById('normalState'),
-      paymentState: document.getElementById('paymentState'),
-      errorContainer: document.getElementById('errorContainer'),
-      errorMessage: document.getElementById('errorMessage'),
-      errorDetails: document.getElementById('errorDetails'),
-      errorDetailsContent: document.getElementById('errorDetailsContent'),
-      errorUrl: document.getElementById('errorUrl'),
-      errorStatus: document.getElementById('errorStatus'),
-      errorType: document.getElementById('errorType'),
-      errorTimestamp: document.getElementById('errorTimestamp'),
-      errorResponse: document.getElementById('errorResponse'),
-      toggleDetailsBtn: document.getElementById('toggleDetailsBtn'),
-      testConnectionBtn: document.getElementById('testConnectionBtn'),
-      tryAgainBtn: document.getElementById('tryAgainBtn'),
-      successMessage: document.getElementById('successMessage'),
-      coffeeCount: document.getElementById('coffeeCount'),
-      debtAmount: document.getElementById('debtAmount'),
-      debtMonth: document.getElementById('debtMonth'),
-      bankAccount: document.getElementById('bankAccount'),
-      singleCoffeeBtn: document.getElementById('singleCoffeeBtn'),
-      doubleCoffeeBtn: document.getElementById('doubleCoffeeBtn'),
-      paidBtn: document.getElementById('paidBtn')
-    };
-
-    // Initialize app
-    async function init() {
-      console.log('=== Inicializace aplikace ===');
-      console.log('SCRIPT_URL:', SCRIPT_URL);
-      
-      // Check if URL is still placeholder
-      if (SCRIPT_URL.includes('PASTE_YOUR') || SCRIPT_URL === '') {
-        showError('SCRIPT_URL není nastaven. Nahraď placeholder skutečnou URL z Google Apps Script.', {
-          url: SCRIPT_URL,
-          type: 'Configuration Error',
-          technical: 'SCRIPT_URL obsahuje placeholder text'
-        });
-        hideLoading();
-        return;
-      }
-      
-      userId = getUserIdFromURL();
-      console.log('User ID:', userId);
-      
-      if (!userId) {
-        showError('Chybí ID uživatele v URL. Přidejte ?id=vase_jmeno', {
-          url: window.location.href,
-          type: 'Missing Parameter',
-          technical: 'URL neobsahuje parametr ?id='
-        });
-        hideLoading();
-        return;
-      }
-
-      await loadUserData();
-    }
-
-    // Get user ID from URL parameter
-    function getUserIdFromURL() {
-      const params = new URLSearchParams(window.location.search);
-      return params.get('id');
-    }
-
-    // Load user data from API
-    async function loadUserData() {
-      const url = `${SCRIPT_URL}?action=user&id=${userId}`;
-      console.log('=== Načítání dat uživatele ===');
-      console.log('URL:', url);
-      console.log('Timestamp:', new Date().toISOString());
-      
-      try {
-        showLoading();
-        hideMessages();
-
-        const response = await fetch(url);
-        console.log('Response status:', response.status);
-        console.log('Response headers:', Object.fromEntries(response.headers.entries()));
-        
-        if (!response.ok) {
-          const responseText = await response.text();
-          console.error('Error response text:', responseText);
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        // ===== SPRÁVA UŽIVATELSKÉHO ID =====
+        function getUserId() {
+            let userId = localStorage.getItem('coffee_user_id');
+            if (!userId) {
+                userId = generateUUID();
+                localStorage.setItem('coffee_user_id', userId);
+            }
+            return userId;
         }
 
-        const responseText = await response.text();
-        console.log('Response text:', responseText);
-        
-        try {
-          userData = JSON.parse(responseText);
-          console.log('Parsed user data:', userData);
-        } catch (parseError) {
-          console.error('JSON parse error:', parseError);
-          throw new Error('Neplatná JSON odpověď ze serveru');
-        }
-        
-        // Update user name
-        elements.userName.textContent = userData.name || userId;
-        console.log('User name updated:', userData.name || userId);
-
-        // Check if payment is required
-        if (userData.needsPayment) {
-          console.log('Payment required, loading bank account...');
-          await loadBankAccount();
-          showPaymentState();
-        } else {
-          console.log('No payment required, showing normal state');
-          showNormalState();
-        }
-        
-        console.log('=== Data úspěšně načtena ===');
-      } catch (error) {
-        console.error('=== CHYBA při načítání dat ===');
-        console.error('Error object:', error);
-        console.error('Error message:', error.message);
-        console.error('Error stack:', error.stack);
-        
-        handleApiError(error, url, 'loadUserData');
-        hideLoading();
-      }
-    }
-
-    // Load bank account number
-    async function loadBankAccount() {
-      const url = `${SCRIPT_URL}?action=account`;
-      console.log('=== Načítání čísla účtu ===');
-      console.log('URL:', url);
-      
-      try {
-        const response = await fetch(url);
-        console.log('Bank account response status:', response.status);
-        
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        function generateUUID() {
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                const r = Math.random() * 16 | 0;
+                const v = c === 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
         }
 
-        const responseText = await response.text();
-        console.log('Bank account response:', responseText);
-        
-        const data = JSON.parse(responseText);
-        console.log('Parsed bank account data:', data);
-        
-        bankAccount = data.account || 'N/A';
-        console.log('Bank account set to:', bankAccount);
-      } catch (error) {
-        console.error('Error loading bank account:', error);
-        console.error('Error details:', error.message);
-        bankAccount = 'Chyba načtení účtu';
-      }
-    }
+        // ===== GLOBÁLNÍ STAV =====
+        let currentMonth = '';
+        let coffeeCount = 0;
+        let pricePerCoffee = 20;
+        let bankAccount = '';
+        let isPaid = false;
+        const userId = getUserId();
 
-    // Add coffee
-    async function addCoffee(amount) {
-      const url = `${SCRIPT_URL}?action=add&id=${userId}&amount=${amount}`;
-      console.log('=== Přidávání kávy ===');
-      console.log('URL:', url);
-      console.log('Amount:', amount);
-      
-      try {
-        // Disable buttons
-        elements.singleCoffeeBtn.disabled = true;
-        elements.doubleCoffeeBtn.disabled = true;
-
-        const response = await fetch(url, {
-          method: 'POST'
-        });
-        console.log('Add coffee response status:', response.status);
-
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        // ===== API FUNKCE =====
+        async function fetchSheetData(range) {
+            const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SHEET_ID}/values/${range}?key=${CONFIG.API_KEY}`;
+            const response = await fetch(url);
+            if (!response.ok) throw new Error('Chyba při načítání dat');
+            return await response.json();
         }
 
-        const responseText = await response.text();
-        console.log('Add coffee response:', responseText);
-        
-        const result = JSON.parse(responseText);
-        console.log('Parsed result:', result);
-        console.log('Result.ok:', result.ok);
-        console.log('Result.count:', result.count);
-        console.log('Current userData.count:', userData.count);
+        async function appendSheetData(range, values) {
+            const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SHEET_ID}/values/${range}:append?valueInputOption=USER_ENTERED&key=${CONFIG.API_KEY}`;
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ values: [values] })
+            });
+            if (!response.ok) throw new Error('Chyba při ukládání dat');
+            return await response.json();
+        }
 
-        if (result.error) {
-          console.warn('Server returned error:', result.error);
-          if (result.error.includes('payment') || result.error.includes('zaplate')) {
-            // User needs to pay - reload data to show payment screen
-            console.log('Payment required, reloading user data...');
+        async function updateSheetData(range, values) {
+            const url = `https://sheets.googleapis.com/v4/spreadsheets/${CONFIG.SHEET_ID}/values/${range}?valueInputOption=USER_ENTERED&key=${CONFIG.API_KEY}`;
+            const response = await fetch(url, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ values: [values] })
+            });
+            if (!response.ok) throw new Error('Chyba při aktualizaci dat');
+            return await response.json();
+        }
+
+        // ===== NAČTENÍ NASTAVENÍ =====
+        async function loadSettings() {
+            try {
+                const data = await fetchSheetData(CONFIG.SHEET_NAME_SETTINGS);
+                if (data.values) {
+                    data.values.forEach(row => {
+                        if (row[0] === 'price_per_coffee') pricePerCoffee = parseFloat(row[1]) || 20;
+                        if (row[0] === 'bank_account') bankAccount = row[1] || '';
+                    });
+                }
+            } catch (error) {
+                console.error('Chyba načítání nastavení:', error);
+            }
+        }
+
+        // ===== NAČTENÍ DAT UŽIVATELE =====
+        async function loadUserData() {
+            currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
+            
+            try {
+                const data = await fetchSheetData(CONFIG.SHEET_NAME_LOG);
+                let userRow = null;
+                let rowIndex = -1;
+
+                if (data.values) {
+                    data.values.forEach((row, index) => {
+                        if (row[0] === userId && row[1] === currentMonth) {
+                            userRow = row;
+                            rowIndex = index + 1;
+                        }
+                    });
+                }
+
+                if (userRow) {
+                    coffeeCount = parseInt(userRow[2]) || 0;
+                    isPaid = userRow[3] === 'TRUE';
+                } else {
+                    coffeeCount = 0;
+                    isPaid = false;
+                    await appendSheetData(CONFIG.SHEET_NAME_LOG, [userId, currentMonth, 0, 'FALSE']);
+                }
+
+                updateUI();
+            } catch (error) {
+                console.error('Chyba načítání dat:', error);
+                showStatus('Chyba při načítání dat. Zkontroluj konfiguraci.', 'error');
+                document.getElementById('setupScreen').style.display = 'block';
+            }
+        }
+
+        // ===== AKTUALIZACE UI =====
+        function updateUI() {
+            document.getElementById('coffeeCount').textContent = coffeeCount;
+            const total = coffeeCount * pricePerCoffee;
+            document.getElementById('totalPrice').textContent = `${total} Kč`;
+            document.getElementById('paymentAmount').textContent = `${total} Kč`;
+            document.getElementById('bankAccount').textContent = bankAccount;
+
+            const btn1 = document.getElementById('btn1');
+            const btn2 = document.getElementById('btn2');
+            const btnPaid = document.getElementById('btnPaid');
+            const paymentSection = document.getElementById('paymentSection');
+
+            btn1.disabled = false;
+            btn2.disabled = false;
+            btnPaid.disabled = isPaid;
+            paymentSection.style.display = coffeeCount > 0 ? 'block' : 'none';
+
+            if (isPaid) {
+                showStatus('Platba byla potvrzena. Pokračuj v evidenci pro další měsíc.', 'success');
+            }
+
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('mainApp').style.display = 'block';
+        }
+
+        // ===== PŘIDÁNÍ KÁVY =====
+        async function addCoffee(count) {
+            const btn1 = document.getElementById('btn1');
+            const btn2 = document.getElementById('btn2');
+            btn1.disabled = true;
+            btn2.disabled = true;
+
+            try {
+                const data = await fetchSheetData(CONFIG.SHEET_NAME_LOG);
+                let rowIndex = -1;
+
+                if (data.values) {
+                    data.values.forEach((row, index) => {
+                        if (row[0] === userId && row[1] === currentMonth) {
+                            rowIndex = index + 1;
+                        }
+                    });
+                }
+
+                if (rowIndex > 0) {
+                    coffeeCount += count;
+                    await updateSheetData(
+                        `${CONFIG.SHEET_NAME_LOG}!A${rowIndex}:D${rowIndex}`,
+                        [userId, currentMonth, coffeeCount, 'FALSE']
+                    );
+                    showStatus(`Přidáno ${count} ${count === 1 ? 'káva' : 'kávy'}!`, 'success');
+                    updateUI();
+                }
+            } catch (error) {
+                console.error('Chyba při přidávání kávy:', error);
+                showStatus('Chyba při ukládání. Zkus to znovu.', 'error');
+            } finally {
+                btn1.disabled = false;
+                btn2.disabled = false;
+            }
+        }
+
+        // ===== POTVRZENÍ PLATBY =====
+        async function confirmPayment() {
+            if (!confirm(`Potvrzuješ platbu ${coffeeCount * pricePerCoffee} Kč za tento měsíc?`)) {
+                return;
+            }
+
+            document.getElementById('btnPaid').disabled = true;
+
+            try {
+                const data = await fetchSheetData(CONFIG.SHEET_NAME_LOG);
+                let rowIndex = -1;
+
+                if (data.values) {
+                    data.values.forEach((row, index) => {
+                        if (row[0] === userId && row[1] === currentMonth) {
+                            rowIndex = index + 1;
+                        }
+                    });
+                }
+
+                if (rowIndex > 0) {
+                    await updateSheetData(
+                        `${CONFIG.SHEET_NAME_LOG}!A${rowIndex}:D${rowIndex}`,
+                        [userId, currentMonth, coffeeCount, 'TRUE']
+                    );
+                    isPaid = true;
+                    showStatus('Platba potvrzena! Nový měsíc začne automaticky.', 'success');
+                    updateUI();
+                }
+            } catch (error) {
+                console.error('Chyba při potvrzování platby:', error);
+                showStatus('Chyba při ukládání. Zkus to znovu.', 'error');
+                document.getElementById('btnPaid').disabled = false;
+            }
+        }
+
+        // ===== ZOBRAZENÍ ZPRÁVY =====
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('statusMessage');
+            statusDiv.innerHTML = `<div class="status-message status-${type}">${message}</div>`;
+            setTimeout(() => {
+                statusDiv.innerHTML = '';
+            }, 5000);
+        }
+
+        // ===== INICIALIZACE =====
+        async function init() {
+            if (CONFIG.SHEET_ID === 'VÁŠ_GOOGLE_SHEET_ID_ZDE' || CONFIG.API_KEY === 'VÁŠ_API_KEY_ZDE') {
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('setupScreen').style.display = 'block';
+                return;
+            }
+
+            await loadSettings();
             await loadUserData();
-          } else {
-            throw new Error(result.error);
-          }
-        } else if (result.ok && result.count !== undefined) {
-          // API returns the NEW total count after addition
-          // Use this value directly - don't add amount ourselves
-          userData.count = result.count;
-          elements.coffeeCount.textContent = result.count;
-          console.log('Coffee count updated to NEW total from API:', result.count);
-          
-          // Show success briefly
-          showSuccess(`Přidáno ${amount === 1 ? '1 káva' : '2 kávy'}!`);
-        } else {
-          // Fallback: if API doesn't return count, add locally
-          console.warn('API did not return count, adding locally');
-          userData.count = userData.count + amount;
-          elements.coffeeCount.textContent = userData.count;
-          console.log('Coffee count updated locally to:', userData.count);
-          
-          showSuccess(`Přidáno ${amount === 1 ? '1 káva' : '2 kávy'}!`);
-        }
-      } catch (error) {
-        console.error('=== CHYBA při přidávání kávy ===');
-        console.error('Error:', error);
-        console.error('Error message:', error.message);
-        handleApiError(error, url, 'addCoffee');
-      } finally {
-        // Re-enable buttons
-        elements.singleCoffeeBtn.disabled = false;
-        elements.doubleCoffeeBtn.disabled = false;
-      }
-    }
-
-    // Mark as paid
-    async function markAsPaid() {
-      const url = `${SCRIPT_URL}?action=paid&id=${userId}`;
-      console.log('=== Označování jako zaplaceno ===');
-      console.log('URL:', url);
-      
-      try {
-        elements.paidBtn.disabled = true;
-        elements.paidBtn.textContent = 'Zpracovávám...';
-
-        const response = await fetch(url, {
-          method: 'POST'
-        });
-        console.log('Mark paid response status:', response.status);
-
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
 
-        const responseText = await response.text();
-        console.log('Mark paid response:', responseText);
-        
-        const result = JSON.parse(responseText);
-        console.log('Parsed result:', result);
-
-        if (result.error) {
-          throw new Error(result.error);
+        // ===== SERVICE WORKER PRO PWA =====
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                const swCode = `
+                    self.addEventListener('install', (e) => {
+                        self.skipWaiting();
+                    });
+                    self.addEventListener('activate', (e) => {
+                        self.clients.claim();
+                    });
+                    self.addEventListener('fetch', (e) => {
+                        e.respondWith(
+                            fetch(e.request).catch(() => {
+                                return new Response('Offline - připoj se k internetu', {
+                                    headers: { 'Content-Type': 'text/plain' }
+                                });
+                            })
+                        );
+                    });
+                `;
+                const blob = new Blob([swCode], { type: 'application/javascript' });
+                const swUrl = URL.createObjectURL(blob);
+                navigator.serviceWorker.register(swUrl);
+            });
         }
 
-        // Show success
-        showSuccess('Platba potvrzena! Můžete si dát další kávu.');
-        console.log('Payment confirmed successfully');
-        
-        // Wait a moment, then reload
-        setTimeout(async () => {
-          await loadUserData();
-        }, 1500);
-      } catch (error) {
-        console.error('=== CHYBA při označování jako zaplaceno ===');
-        console.error('Error:', error);
-        handleApiError(error, url, 'markAsPaid');
-        elements.paidBtn.disabled = false;
-        elements.paidBtn.textContent = '✓ Zaplaceno';
-      }
-    }
-
-    // UI State Management
-    function showLoading() {
-      elements.loadingState.classList.remove('hidden');
-      elements.normalState.classList.add('hidden');
-      elements.paymentState.classList.add('hidden');
-    }
-
-    function hideLoading() {
-      elements.loadingState.classList.add('hidden');
-    }
-
-    function showNormalState() {
-      hideLoading();
-      elements.normalState.classList.remove('hidden');
-      elements.paymentState.classList.add('hidden');
-      
-      // Update coffee count
-      elements.coffeeCount.textContent = userData.count || 0;
-    }
-
-    function showPaymentState() {
-      hideLoading();
-      elements.normalState.classList.add('hidden');
-      elements.paymentState.classList.remove('hidden');
-      
-      // Update payment info
-      elements.debtAmount.textContent = userData.debtAmount || 0;
-      elements.debtMonth.textContent = 'káv';
-      elements.bankAccount.textContent = bankAccount || 'Načítání...';
-      elements.paidBtn.disabled = false;
-      elements.paidBtn.textContent = '✓ Zaplaceno';
-    }
-
-    // Handle API errors with detailed information
-    function handleApiError(error, url, context) {
-      console.error(`[${context}] Error details:`, {
-        message: error.message,
-        name: error.name,
-        stack: error.stack,
-        url: url
-      });
-      
-      let userMessage = 'Chyba připojení k serveru';
-      let errorType = 'Unknown Error';
-      let technicalDetails = error.message;
-      
-      // Detect error type
-      if (error.message.includes('Failed to fetch') || error.name === 'TypeError') {
-        // Network or CORS error
-        if (SCRIPT_URL.includes('script.google.com')) {
-          userMessage = 'CORS chyba - přenasaď script s přístupem "Kdokoli"';
-          errorType = 'CORS Error';
-          technicalDetails = 'Cross-Origin Request Blocked. Google Apps Script musí být nasazený s přístupem "Kdokoli" a jako "Web app".';
-        } else {
-          userMessage = 'Žádné připojení k internetu nebo server není dostupný';
-          errorType = 'Network Error';
-          technicalDetails = 'Network request failed. Zkontroluj internetové připojení nebo dostupnost serveru.';
-        }
-      } else if (error.message.includes('HTTP 404')) {
-        userMessage = 'URL nenalezena - zkontroluj SCRIPT_URL';
-        errorType = '404 Not Found';
-        technicalDetails = 'Server vrátil 404. URL je špatně nebo script není nasazený.';
-      } else if (error.message.includes('HTTP 403')) {
-        userMessage = 'Nedostatečná oprávnění - nastav "Kdokoli" v nasazení';
-        errorType = '403 Forbidden';
-        technicalDetails = 'Server odmítl přístup. V nasazení Google Apps Script nastav "Kdo má přístup" na "Kdokoli".';
-      } else if (error.message.includes('HTTP 401')) {
-        userMessage = 'Nepřihlášen - zkontroluj oprávnění scriptu';
-        errorType = '401 Unauthorized';
-        technicalDetails = 'Server vyžaduje autentizaci. Zkontroluj nastavení přístupu v Google Apps Script.';
-      } else if (error.message.includes('HTTP 500') || error.message.includes('HTTP 502') || error.message.includes('HTTP 503')) {
-        userMessage = 'Chyba na serveru - zkus to za chvíli';
-        errorType = 'Server Error';
-        technicalDetails = error.message;
-      } else if (error.message.includes('JSON')) {
-        userMessage = 'Neplatná odpověď ze serveru';
-        errorType = 'Invalid JSON';
-        technicalDetails = 'Server nevrátil platnou JSON odpověď. Možná chyba ve scriptu.';
-      }
-      
-      lastError = {
-        message: userMessage,
-        url: url,
-        status: error.message.match(/HTTP (\d+)/)?.[1] || 'N/A',
-        type: errorType,
-        timestamp: new Date().toLocaleString('cs-CZ'),
-        response: technicalDetails
-      };
-      
-      showError(userMessage, lastError);
-    }
-    
-    // Show error with details
-    function showError(message, details = null) {
-      console.error('Showing error:', message);
-      if (details) {
-        console.error('Error details:', details);
-      }
-      
-      elements.errorMessage.textContent = message;
-      elements.errorContainer.classList.remove('hidden');
-      
-      if (details) {
-        elements.errorDetails.classList.remove('hidden');
-        elements.errorUrl.textContent = details.url || 'N/A';
-        elements.errorStatus.textContent = details.status || 'N/A';
-        elements.errorType.textContent = details.type || 'N/A';
-        elements.errorTimestamp.textContent = details.timestamp || new Date().toLocaleString('cs-CZ');
-        elements.errorResponse.textContent = details.response || 'N/A';
-      } else {
-        elements.errorDetails.classList.add('hidden');
-      }
-    }
-
-    function showSuccess(message) {
-      elements.successMessage.textContent = message;
-      elements.successMessage.classList.remove('hidden');
-      
-      setTimeout(() => {
-        elements.successMessage.classList.add('hidden');
-      }, 3000);
-    }
-
-    function hideMessages() {
-      elements.errorContainer.classList.add('hidden');
-      elements.successMessage.classList.add('hidden');
-    }
-    
-    // Test connection
-    async function testConnection() {
-      const url = `${SCRIPT_URL}?action=account`;
-      console.log('=== TESTOVÁNÍ PŘIPOJENÍ ===');
-      console.log('URL:', url);
-      console.log('Timestamp:', new Date().toISOString());
-      
-      elements.testConnectionBtn.disabled = true;
-      elements.testConnectionBtn.textContent = 'Testuji...';
-      
-      try {
-        const startTime = performance.now();
-        const response = await fetch(url);
-        const endTime = performance.now();
-        const duration = (endTime - startTime).toFixed(0);
-        
-        console.log('Test response status:', response.status);
-        console.log('Test response time:', duration + 'ms');
-        console.log('Test response headers:', Object.fromEntries(response.headers.entries()));
-        
-        const responseText = await response.text();
-        console.log('Test response text:', responseText);
-        
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-        
-        try {
-          const data = JSON.parse(responseText);
-          console.log('Test parsed data:', data);
-          showSuccess(`✓ Připojení funguje! (${duration}ms) Odpověď: ${JSON.stringify(data)}`);
-        } catch (parseError) {
-          console.error('JSON parse failed:', parseError);
-          showError('Server odpověděl, ale odpověď není validní JSON', {
-            url: url,
-            status: response.status,
-            type: 'Invalid JSON Response',
-            timestamp: new Date().toLocaleString('cs-CZ'),
-            response: responseText.substring(0, 500)
-          });
-        }
-        
-      } catch (error) {
-        console.error('=== TEST SELHAL ===');
-        console.error('Error:', error);
-        console.error('Error message:', error.message);
-        console.error('Error stack:', error.stack);
-        handleApiError(error, url, 'testConnection');
-      } finally {
-        elements.testConnectionBtn.disabled = false;
-        elements.testConnectionBtn.textContent = 'Otestovat připojení';
-      }
-    }
-    
-    // Toggle error details
-    function toggleErrorDetails() {
-      const isHidden = elements.errorDetailsContent.classList.contains('hidden');
-      if (isHidden) {
-        elements.errorDetailsContent.classList.remove('hidden');
-        elements.toggleDetailsBtn.textContent = 'Skrýt detaily';
-      } else {
-        elements.errorDetailsContent.classList.add('hidden');
-        elements.toggleDetailsBtn.textContent = 'Zobrazit detaily';
-      }
-    }
-
-    // Event Listeners
-    elements.singleCoffeeBtn.addEventListener('click', () => addCoffee(1));
-    elements.doubleCoffeeBtn.addEventListener('click', () => addCoffee(2));
-    elements.paidBtn.addEventListener('click', markAsPaid);
-    elements.toggleDetailsBtn.addEventListener('click', toggleErrorDetails);
-    elements.testConnectionBtn.addEventListener('click', testConnection);
-    elements.tryAgainBtn.addEventListener('click', () => {
-      console.log('=== ZKOUŠÍM ZNOVU ===');
-      init();
-    });
-
-    // Start the app
-    init();
-  </script>
+        // Spuštění aplikace
+        init();
+    </script>
 </body>
 </html>
