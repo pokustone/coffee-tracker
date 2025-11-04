@@ -468,6 +468,10 @@ body {
 }
 
 /* Error Message */
+#errorContainer {
+  margin-bottom: var(--space-16);
+}
+
 .error-message {
   background: rgba(var(--color-error-rgb), 0.1);
   border: 1px solid rgba(var(--color-error-rgb), 0.3);
@@ -475,7 +479,125 @@ body {
   padding: var(--space-16);
   color: var(--color-error);
   text-align: center;
-  margin-bottom: var(--space-16);
+  margin-bottom: var(--space-12);
+  font-weight: var(--font-weight-medium);
+}
+
+.error-details {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-16);
+  margin-bottom: var(--space-12);
+}
+
+.error-details-header {
+  margin-bottom: var(--space-12);
+}
+
+.btn-link {
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  text-decoration: underline;
+  padding: 0;
+  font-weight: var(--font-weight-medium);
+}
+
+.btn-link:hover {
+  color: var(--color-primary-hover);
+}
+
+.error-details-content {
+  margin-top: var(--space-12);
+}
+
+.detail-item {
+  margin-bottom: var(--space-12);
+  padding-bottom: var(--space-12);
+  border-bottom: 1px solid var(--color-card-border-inner);
+}
+
+.detail-item:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.detail-label {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-secondary);
+  margin-bottom: var(--space-4);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.detail-value {
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+  word-break: break-all;
+  font-family: var(--font-family-mono);
+  background: var(--color-bg-1);
+  padding: var(--space-8);
+  border-radius: var(--radius-sm);
+}
+
+pre.detail-value {
+  white-space: pre-wrap;
+  margin: 0;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.error-actions {
+  display: flex;
+  gap: var(--space-12);
+}
+
+.error-actions .btn {
+  flex: 1;
+  padding: var(--space-12) var(--space-16);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  transition: all var(--duration-normal) var(--ease-standard);
+  border: none;
+}
+
+.btn--primary {
+  background: var(--color-primary);
+  color: var(--color-btn-primary-text);
+}
+
+.btn--primary:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+}
+
+.btn--primary:active:not(:disabled) {
+  background: var(--color-primary-active);
+}
+
+.btn--secondary {
+  background: var(--color-secondary);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+}
+
+.btn--secondary:hover:not(:disabled) {
+  background: var(--color-secondary-hover);
+}
+
+.btn--secondary:active:not(:disabled) {
+  background: var(--color-secondary-active);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* Success Message */
@@ -520,7 +642,40 @@ body {
     </div>
 
     <!-- Error Message -->
-    <div id="errorMessage" class="error-message hidden"></div>
+    <div id="errorContainer" class="hidden">
+      <div id="errorMessage" class="error-message"></div>
+      <div id="errorDetails" class="error-details hidden">
+        <div class="error-details-header">
+          <button class="btn-link" id="toggleDetailsBtn">Zobrazit detaily</button>
+        </div>
+        <div id="errorDetailsContent" class="error-details-content hidden">
+          <div class="detail-item">
+            <div class="detail-label">URL:</div>
+            <div class="detail-value" id="errorUrl"></div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">HTTP Status:</div>
+            <div class="detail-value" id="errorStatus"></div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">Typ chyby:</div>
+            <div class="detail-value" id="errorType"></div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">Čas pokusu:</div>
+            <div class="detail-value" id="errorTimestamp"></div>
+          </div>
+          <div class="detail-item">
+            <div class="detail-label">Odpověď serveru:</div>
+            <pre class="detail-value" id="errorResponse"></pre>
+          </div>
+        </div>
+      </div>
+      <div class="error-actions">
+        <button class="btn btn--secondary" id="testConnectionBtn">Otestovat připojení</button>
+        <button class="btn btn--primary" id="tryAgainBtn">Zkusit znovu</button>
+      </div>
+    </div>
 
     <!-- Success Message -->
     <div id="successMessage" class="success-message hidden"></div>
@@ -563,7 +718,17 @@ body {
 
   <script>
     // Configuration
-    const SCRIPT_URL =  "https://script.google.com/macros/s/AKfycbx7RPwoAl8r-7T6gxYcCgjRIBW_8uQBm_fXTpxx9pUyqx3jZyOruPswEUZjOlRjSx48/exec";
+    const SCRIPT_URL = 'PASTE_YOUR_DEPLOYED_APPS_SCRIPT_WEBAPP_URL_HERE';
+    
+    // Debug state
+    let lastError = {
+      message: '',
+      url: '',
+      status: '',
+      type: '',
+      timestamp: '',
+      response: ''
+    };
     
     // State
     let userId = null;
@@ -576,7 +741,18 @@ body {
       loadingState: document.getElementById('loadingState'),
       normalState: document.getElementById('normalState'),
       paymentState: document.getElementById('paymentState'),
+      errorContainer: document.getElementById('errorContainer'),
       errorMessage: document.getElementById('errorMessage'),
+      errorDetails: document.getElementById('errorDetails'),
+      errorDetailsContent: document.getElementById('errorDetailsContent'),
+      errorUrl: document.getElementById('errorUrl'),
+      errorStatus: document.getElementById('errorStatus'),
+      errorType: document.getElementById('errorType'),
+      errorTimestamp: document.getElementById('errorTimestamp'),
+      errorResponse: document.getElementById('errorResponse'),
+      toggleDetailsBtn: document.getElementById('toggleDetailsBtn'),
+      testConnectionBtn: document.getElementById('testConnectionBtn'),
+      tryAgainBtn: document.getElementById('tryAgainBtn'),
       successMessage: document.getElementById('successMessage'),
       coffeeCount: document.getElementById('coffeeCount'),
       debtAmount: document.getElementById('debtAmount'),
@@ -589,10 +765,30 @@ body {
 
     // Initialize app
     async function init() {
+      console.log('=== Inicializace aplikace ===');
+      console.log('SCRIPT_URL:', SCRIPT_URL);
+      
+      // Check if URL is still placeholder
+      if (SCRIPT_URL.includes('PASTE_YOUR') || SCRIPT_URL === '') {
+        showError('SCRIPT_URL není nastaven. Nahraď placeholder skutečnou URL z Google Apps Script.', {
+          url: SCRIPT_URL,
+          type: 'Configuration Error',
+          technical: 'SCRIPT_URL obsahuje placeholder text'
+        });
+        hideLoading();
+        return;
+      }
+      
       userId = getUserIdFromURL();
+      console.log('User ID:', userId);
       
       if (!userId) {
-        showError('Chybí ID uživatele v URL. Přidejte ?id=vase_jmeno');
+        showError('Chybí ID uživatele v URL. Přidejte ?id=vase_jmeno', {
+          url: window.location.href,
+          type: 'Missing Parameter',
+          technical: 'URL neobsahuje parametr ?id='
+        });
+        hideLoading();
         return;
       }
 
@@ -607,87 +803,153 @@ body {
 
     // Load user data from API
     async function loadUserData() {
+      const url = `${SCRIPT_URL}?action=user&id=${userId}`;
+      console.log('=== Načítání dat uživatele ===');
+      console.log('URL:', url);
+      console.log('Timestamp:', new Date().toISOString());
+      
       try {
         showLoading();
         hideMessages();
 
-        const response = await fetch(`${SCRIPT_URL}?action=user&id=${userId}`);
+        const response = await fetch(url);
+        console.log('Response status:', response.status);
+        console.log('Response headers:', Object.fromEntries(response.headers.entries()));
         
         if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+          const responseText = await response.text();
+          console.error('Error response text:', responseText);
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
 
-        userData = await response.json();
+        const responseText = await response.text();
+        console.log('Response text:', responseText);
+        
+        try {
+          userData = JSON.parse(responseText);
+          console.log('Parsed user data:', userData);
+        } catch (parseError) {
+          console.error('JSON parse error:', parseError);
+          throw new Error('Neplatná JSON odpověď ze serveru');
+        }
         
         // Update user name
         elements.userName.textContent = userData.name || userId;
+        console.log('User name updated:', userData.name || userId);
 
         // Check if payment is required
         if (userData.needsPayment) {
+          console.log('Payment required, loading bank account...');
           await loadBankAccount();
           showPaymentState();
         } else {
+          console.log('No payment required, showing normal state');
           showNormalState();
         }
+        
+        console.log('=== Data úspěšně načtena ===');
       } catch (error) {
-        console.error('Error loading user data:', error);
-        showError('Chyba připojení. Zkontrolujte SCRIPT_URL a zkuste to znovu.');
+        console.error('=== CHYBA při načítání dat ===');
+        console.error('Error object:', error);
+        console.error('Error message:', error.message);
+        console.error('Error stack:', error.stack);
+        
+        handleApiError(error, url, 'loadUserData');
         hideLoading();
       }
     }
 
     // Load bank account number
     async function loadBankAccount() {
+      const url = `${SCRIPT_URL}?action=account`;
+      console.log('=== Načítání čísla účtu ===');
+      console.log('URL:', url);
+      
       try {
-        const response = await fetch(`${SCRIPT_URL}?action=account`);
+        const response = await fetch(url);
+        console.log('Bank account response status:', response.status);
         
         if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
 
-        const data = await response.json();
+        const responseText = await response.text();
+        console.log('Bank account response:', responseText);
+        
+        const data = JSON.parse(responseText);
+        console.log('Parsed bank account data:', data);
+        
         bankAccount = data.account || 'N/A';
+        console.log('Bank account set to:', bankAccount);
       } catch (error) {
         console.error('Error loading bank account:', error);
+        console.error('Error details:', error.message);
         bankAccount = 'Chyba načtení účtu';
       }
     }
 
     // Add coffee
     async function addCoffee(amount) {
+      const url = `${SCRIPT_URL}?action=add&id=${userId}&amount=${amount}`;
+      console.log('=== Přidávání kávy ===');
+      console.log('URL:', url);
+      console.log('Amount:', amount);
+      
       try {
         // Disable buttons
         elements.singleCoffeeBtn.disabled = true;
         elements.doubleCoffeeBtn.disabled = true;
 
-        const response = await fetch(`${SCRIPT_URL}?action=add&id=${userId}&amount=${amount}`, {
+        const response = await fetch(url, {
           method: 'POST'
         });
+        console.log('Add coffee response status:', response.status);
 
         if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
 
-        const result = await response.json();
+        const responseText = await response.text();
+        console.log('Add coffee response:', responseText);
+        
+        const result = JSON.parse(responseText);
+        console.log('Parsed result:', result);
+        console.log('Result.ok:', result.ok);
+        console.log('Result.count:', result.count);
+        console.log('Current userData.count:', userData.count);
 
         if (result.error) {
+          console.warn('Server returned error:', result.error);
           if (result.error.includes('payment') || result.error.includes('zaplate')) {
             // User needs to pay - reload data to show payment screen
+            console.log('Payment required, reloading user data...');
             await loadUserData();
           } else {
             throw new Error(result.error);
           }
-        } else {
-          // Update count
-          userData.count = result.count || (userData.count + amount);
-          elements.coffeeCount.textContent = userData.count;
+        } else if (result.ok && result.count !== undefined) {
+          // API returns the NEW total count after addition
+          // Use this value directly - don't add amount ourselves
+          userData.count = result.count;
+          elements.coffeeCount.textContent = result.count;
+          console.log('Coffee count updated to NEW total from API:', result.count);
           
           // Show success briefly
           showSuccess(`Přidáno ${amount === 1 ? '1 káva' : '2 kávy'}!`);
+        } else {
+          // Fallback: if API doesn't return count, add locally
+          console.warn('API did not return count, adding locally');
+          userData.count = userData.count + amount;
+          elements.coffeeCount.textContent = userData.count;
+          console.log('Coffee count updated locally to:', userData.count);
+          
+          showSuccess(`Přidáno ${amount === 1 ? '1 káva' : '2 kávy'}!`);
         }
       } catch (error) {
-        console.error('Error adding coffee:', error);
-        showError('Chyba při přidávání kávy. Zkuste to znovu.');
+        console.error('=== CHYBA při přidávání kávy ===');
+        console.error('Error:', error);
+        console.error('Error message:', error.message);
+        handleApiError(error, url, 'addCoffee');
       } finally {
         // Re-enable buttons
         elements.singleCoffeeBtn.disabled = false;
@@ -697,19 +959,28 @@ body {
 
     // Mark as paid
     async function markAsPaid() {
+      const url = `${SCRIPT_URL}?action=paid&id=${userId}`;
+      console.log('=== Označování jako zaplaceno ===');
+      console.log('URL:', url);
+      
       try {
         elements.paidBtn.disabled = true;
         elements.paidBtn.textContent = 'Zpracovávám...';
 
-        const response = await fetch(`${SCRIPT_URL}?action=paid&id=${userId}`, {
+        const response = await fetch(url, {
           method: 'POST'
         });
+        console.log('Mark paid response status:', response.status);
 
         if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
 
-        const result = await response.json();
+        const responseText = await response.text();
+        console.log('Mark paid response:', responseText);
+        
+        const result = JSON.parse(responseText);
+        console.log('Parsed result:', result);
 
         if (result.error) {
           throw new Error(result.error);
@@ -717,14 +988,16 @@ body {
 
         // Show success
         showSuccess('Platba potvrzena! Můžete si dát další kávu.');
+        console.log('Payment confirmed successfully');
         
         // Wait a moment, then reload
         setTimeout(async () => {
           await loadUserData();
         }, 1500);
       } catch (error) {
-        console.error('Error marking as paid:', error);
-        showError('Chyba při potvrzování platby. Zkuste to znovu.');
+        console.error('=== CHYBA při označování jako zaplaceno ===');
+        console.error('Error:', error);
+        handleApiError(error, url, 'markAsPaid');
         elements.paidBtn.disabled = false;
         elements.paidBtn.textContent = '✓ Zaplaceno';
       }
@@ -763,13 +1036,85 @@ body {
       elements.paidBtn.textContent = '✓ Zaplaceno';
     }
 
-    function showError(message) {
-      elements.errorMessage.textContent = message;
-      elements.errorMessage.classList.remove('hidden');
+    // Handle API errors with detailed information
+    function handleApiError(error, url, context) {
+      console.error(`[${context}] Error details:`, {
+        message: error.message,
+        name: error.name,
+        stack: error.stack,
+        url: url
+      });
       
-      setTimeout(() => {
-        elements.errorMessage.classList.add('hidden');
-      }, 5000);
+      let userMessage = 'Chyba připojení k serveru';
+      let errorType = 'Unknown Error';
+      let technicalDetails = error.message;
+      
+      // Detect error type
+      if (error.message.includes('Failed to fetch') || error.name === 'TypeError') {
+        // Network or CORS error
+        if (SCRIPT_URL.includes('script.google.com')) {
+          userMessage = 'CORS chyba - přenasaď script s přístupem "Kdokoli"';
+          errorType = 'CORS Error';
+          technicalDetails = 'Cross-Origin Request Blocked. Google Apps Script musí být nasazený s přístupem "Kdokoli" a jako "Web app".';
+        } else {
+          userMessage = 'Žádné připojení k internetu nebo server není dostupný';
+          errorType = 'Network Error';
+          technicalDetails = 'Network request failed. Zkontroluj internetové připojení nebo dostupnost serveru.';
+        }
+      } else if (error.message.includes('HTTP 404')) {
+        userMessage = 'URL nenalezena - zkontroluj SCRIPT_URL';
+        errorType = '404 Not Found';
+        technicalDetails = 'Server vrátil 404. URL je špatně nebo script není nasazený.';
+      } else if (error.message.includes('HTTP 403')) {
+        userMessage = 'Nedostatečná oprávnění - nastav "Kdokoli" v nasazení';
+        errorType = '403 Forbidden';
+        technicalDetails = 'Server odmítl přístup. V nasazení Google Apps Script nastav "Kdo má přístup" na "Kdokoli".';
+      } else if (error.message.includes('HTTP 401')) {
+        userMessage = 'Nepřihlášen - zkontroluj oprávnění scriptu';
+        errorType = '401 Unauthorized';
+        technicalDetails = 'Server vyžaduje autentizaci. Zkontroluj nastavení přístupu v Google Apps Script.';
+      } else if (error.message.includes('HTTP 500') || error.message.includes('HTTP 502') || error.message.includes('HTTP 503')) {
+        userMessage = 'Chyba na serveru - zkus to za chvíli';
+        errorType = 'Server Error';
+        technicalDetails = error.message;
+      } else if (error.message.includes('JSON')) {
+        userMessage = 'Neplatná odpověď ze serveru';
+        errorType = 'Invalid JSON';
+        technicalDetails = 'Server nevrátil platnou JSON odpověď. Možná chyba ve scriptu.';
+      }
+      
+      lastError = {
+        message: userMessage,
+        url: url,
+        status: error.message.match(/HTTP (\d+)/)?.[1] || 'N/A',
+        type: errorType,
+        timestamp: new Date().toLocaleString('cs-CZ'),
+        response: technicalDetails
+      };
+      
+      showError(userMessage, lastError);
+    }
+    
+    // Show error with details
+    function showError(message, details = null) {
+      console.error('Showing error:', message);
+      if (details) {
+        console.error('Error details:', details);
+      }
+      
+      elements.errorMessage.textContent = message;
+      elements.errorContainer.classList.remove('hidden');
+      
+      if (details) {
+        elements.errorDetails.classList.remove('hidden');
+        elements.errorUrl.textContent = details.url || 'N/A';
+        elements.errorStatus.textContent = details.status || 'N/A';
+        elements.errorType.textContent = details.type || 'N/A';
+        elements.errorTimestamp.textContent = details.timestamp || new Date().toLocaleString('cs-CZ');
+        elements.errorResponse.textContent = details.response || 'N/A';
+      } else {
+        elements.errorDetails.classList.add('hidden');
+      }
     }
 
     function showSuccess(message) {
@@ -782,14 +1127,86 @@ body {
     }
 
     function hideMessages() {
-      elements.errorMessage.classList.add('hidden');
+      elements.errorContainer.classList.add('hidden');
       elements.successMessage.classList.add('hidden');
+    }
+    
+    // Test connection
+    async function testConnection() {
+      const url = `${SCRIPT_URL}?action=account`;
+      console.log('=== TESTOVÁNÍ PŘIPOJENÍ ===');
+      console.log('URL:', url);
+      console.log('Timestamp:', new Date().toISOString());
+      
+      elements.testConnectionBtn.disabled = true;
+      elements.testConnectionBtn.textContent = 'Testuji...';
+      
+      try {
+        const startTime = performance.now();
+        const response = await fetch(url);
+        const endTime = performance.now();
+        const duration = (endTime - startTime).toFixed(0);
+        
+        console.log('Test response status:', response.status);
+        console.log('Test response time:', duration + 'ms');
+        console.log('Test response headers:', Object.fromEntries(response.headers.entries()));
+        
+        const responseText = await response.text();
+        console.log('Test response text:', responseText);
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        try {
+          const data = JSON.parse(responseText);
+          console.log('Test parsed data:', data);
+          showSuccess(`✓ Připojení funguje! (${duration}ms) Odpověď: ${JSON.stringify(data)}`);
+        } catch (parseError) {
+          console.error('JSON parse failed:', parseError);
+          showError('Server odpověděl, ale odpověď není validní JSON', {
+            url: url,
+            status: response.status,
+            type: 'Invalid JSON Response',
+            timestamp: new Date().toLocaleString('cs-CZ'),
+            response: responseText.substring(0, 500)
+          });
+        }
+        
+      } catch (error) {
+        console.error('=== TEST SELHAL ===');
+        console.error('Error:', error);
+        console.error('Error message:', error.message);
+        console.error('Error stack:', error.stack);
+        handleApiError(error, url, 'testConnection');
+      } finally {
+        elements.testConnectionBtn.disabled = false;
+        elements.testConnectionBtn.textContent = 'Otestovat připojení';
+      }
+    }
+    
+    // Toggle error details
+    function toggleErrorDetails() {
+      const isHidden = elements.errorDetailsContent.classList.contains('hidden');
+      if (isHidden) {
+        elements.errorDetailsContent.classList.remove('hidden');
+        elements.toggleDetailsBtn.textContent = 'Skrýt detaily';
+      } else {
+        elements.errorDetailsContent.classList.add('hidden');
+        elements.toggleDetailsBtn.textContent = 'Zobrazit detaily';
+      }
     }
 
     // Event Listeners
     elements.singleCoffeeBtn.addEventListener('click', () => addCoffee(1));
     elements.doubleCoffeeBtn.addEventListener('click', () => addCoffee(2));
     elements.paidBtn.addEventListener('click', markAsPaid);
+    elements.toggleDetailsBtn.addEventListener('click', toggleErrorDetails);
+    elements.testConnectionBtn.addEventListener('click', testConnection);
+    elements.tryAgainBtn.addEventListener('click', () => {
+      console.log('=== ZKOUŠÍM ZNOVU ===');
+      init();
+    });
 
     // Start the app
     init();
