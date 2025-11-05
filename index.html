@@ -76,7 +76,10 @@
           customCount: '',
           adminEmail: '',
           adminPassword: '',
-          showAdminLogin: false
+          showAdminLogin: false,
+          expandedYears: new Set(),
+          expandedMonths: new Set(),
+          expandedWeeks: new Set()
         };
 
         onAuthStateChanged(auth, (user) => {
@@ -92,14 +95,13 @@
         return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
       }
 
-	isFirstDay() {
-  	// Testovací režim přes URL parametr
-  	const urlParams = new URLSearchParams(window.location.search);
- 	 if (urlParams.get('testFirstDay') === 'true') {
-   	 return true;
- 	 }
- 	 return new Date().getDate() === 1;
-	}
+      isFirstDay() {
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('testFirstDay') === 'true') {
+          return true;
+        }
+        return new Date().getDate() === 1;
+      }
 
       generateCode() {
         return Math.floor(100000 + Math.random() * 900000).toString();
@@ -109,6 +111,53 @@
         return new Date(ts).toLocaleString('cs-CZ', {
           day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
         });
+      }
+
+      formatDateShort(ts) {
+        return new Date(ts).toLocaleDateString('cs-CZ', {
+          day: '2-digit', month: '2-digit', year: 'numeric'
+        });
+      }
+
+      getWeekNumber(date) {
+        const d = new Date(date);
+        d.setHours(0, 0, 0, 0);
+        d.setDate(d.getDate() + 4 - (d.getDay() || 7));
+        const yearStart = new Date(d.getFullYear(), 0, 1);
+        const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+        return weekNo;
+      }
+
+      groupLogsByHierarchy(logs) {
+        const grouped = {};
+        
+        logs.forEach(log => {
+          const date = new Date(log.timestamp);
+          const year = date.getFullYear();
+          const month = `${year}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+          const week = `${year}-W${String(this.getWeekNumber(date)).padStart(2, '0')}`;
+          const day = date.toISOString().split('T')[0];
+
+          if (!grouped[year]) grouped[year] = { months: {}, total: 0, count: 0 };
+          if (!grouped[year].months[month]) grouped[year].months[month] = { weeks: {}, total: 0, count: 0 };
+          if (!grouped[year].months[month].weeks[week]) grouped[year].months[month].weeks[week] = { days: {}, total: 0, count: 0 };
+          if (!grouped[year].months[month].weeks[week].days[day]) grouped[year].months[month].weeks[week].days[day] = { logs: [], total: 0, count: 0 };
+
+          grouped[year].months[month].weeks[week].days[day].logs.push(log);
+          grouped[year].months[month].weeks[week].days[day].total += log.count * log.price;
+          grouped[year].months[month].weeks[week].days[day].count += log.count;
+
+          grouped[year].months[month].weeks[week].total += log.count * log.price;
+          grouped[year].months[month].weeks[week].count += log.count;
+
+          grouped[year].months[month].total += log.count * log.price;
+          grouped[year].months[month].count += log.count;
+
+          grouped[year].total += log.count * log.price;
+          grouped[year].count += log.count;
+        });
+
+        return grouped;
       }
 
       async init() {
@@ -309,6 +358,33 @@
         }
       }
 
+      toggleYear(year) {
+        if (this.state.expandedYears.has(year)) {
+          this.state.expandedYears.delete(year);
+        } else {
+          this.state.expandedYears.add(year);
+        }
+        this.render();
+      }
+
+      toggleMonth(month) {
+        if (this.state.expandedMonths.has(month)) {
+          this.state.expandedMonths.delete(month);
+        } else {
+          this.state.expandedMonths.add(month);
+        }
+        this.render();
+      }
+
+      toggleWeek(week) {
+        if (this.state.expandedWeeks.has(week)) {
+          this.state.expandedWeeks.delete(week);
+        } else {
+          this.state.expandedWeeks.add(week);
+        }
+        this.render();
+      }
+
       render() {
         const el = document.getElementById('app');
         el.innerHTML = this[`render${this.state.view.charAt(0).toUpperCase() + this.state.view.slice(1)}`]();
@@ -447,37 +523,132 @@
       }
 
       renderAlltimelog() {
-        return this.renderLog('Historie - Celkem', this.state.allTimeLogs, this.state.coffeeCount);
-      }
+        const grouped = this.groupLogsByHierarchy(this.state.allTimeLogs);
+        const years = Object.keys(grouped).sort((a, b) => b - a);
 
-      renderMonthlylog() {
-        return this.renderLog('Historie - Měsíc', this.state.monthlyLogs, this.state.monthlyTotal);
-      }
-
-      renderLog(title, logs, count) {
         return `
           <div class="min-h-screen bg-gradient-to-br from-amber-50 to-orange-100">
             <div class="bg-white shadow-md">
               <div class="max-w-4xl mx-auto px-4 py-4 flex items-center gap-3">
                 <button id="back" class="text-gray-600 hover:text-gray-800">◀️</button>
-                <div><h1 class="text-xl font-bold">${title}</h1><p class="text-sm text-gray-600">${count} káv</p></div>
+                <div><h1 class="text-xl font-bold">Historie - Celkem</h1><p class="text-sm text-gray-600">${this.state.coffeeCount} káv</p></div>
               </div>
             </div>
             <div class="max-w-4xl mx-auto p-4">
               <div class="bg-white rounded-2xl shadow-lg p-6">
-                ${logs.length > 0 ? `<div class="space-y-2">${logs.map(l => `
+                ${years.length > 0 ? `<div class="space-y-2">
+                  ${years.map(year => {
+                    const yearData = grouped[year];
+                    const isExpanded = this.state.expandedYears.has(year);
+                    return `
+                      <div class="border-2 border-gray-200 rounded-lg">
+                        <button class="w-full p-4 flex justify-between items-center hover:bg-gray-50" data-toggle-year="${year}">
+                          <div class="flex items-center gap-3">
+                            <span class="text-2xl">${isExpanded ? '📂' : '📁'}</span>
+                            <div>
+                              <p class="font-bold text-lg">${year}</p>
+                              <p class="text-sm text-gray-600">${yearData.count} káv</p>
+                            </div>
+                          </div>
+                          <div class="text-right">
+                            <p class="font-bold text-amber-600">${yearData.total} Kč</p>
+                          </div>
+                        </button>
+                        ${isExpanded ? `<div class="px-4 pb-4 space-y-2">
+                          ${Object.keys(yearData.months).sort((a, b) => b.localeCompare(a)).map(month => {
+                            const monthData = yearData.months[month];
+                            const isMonthExpanded = this.state.expandedMonths.has(month);
+                            const monthName = new Date(month + '-01').toLocaleDateString('cs-CZ', { month: 'long', year: 'numeric' });
+                            return `
+                              <div class="border-l-4 border-amber-300 ml-4">
+                                <button class="w-full p-3 flex justify-between items-center hover:bg-gray-50" data-toggle-month="${month}">
+                                  <div class="flex items-center gap-2">
+                                    <span>${isMonthExpanded ? '📂' : '📁'}</span>
+                                    <div>
+                                      <p class="font-semibold">${monthName}</p>
+                                      <p class="text-xs text-gray-600">${monthData.count} káv</p>
+                                    </div>
+                                  </div>
+                                  <p class="font-bold text-amber-600">${monthData.total} Kč</p>
+                                </button>
+                                ${isMonthExpanded ? `<div class="px-3 pb-3 space-y-2">
+                                  ${Object.keys(monthData.weeks).sort((a, b) => b.localeCompare(a)).map(week => {
+                                    const weekData = monthData.weeks[week];
+                                    const isWeekExpanded = this.state.expandedWeeks.has(week);
+                                    return `
+                                      <div class="border-l-4 border-blue-200 ml-4">
+                                        <button class="w-full p-2 flex justify-between items-center hover:bg-gray-50 text-sm" data-toggle-week="${week}">
+                                          <div class="flex items-center gap-2">
+                                            <span>${isWeekExpanded ? '📂' : '📁'}</span>
+                                            <div>
+                                              <p class="font-semibold">Týden ${week.split('-W')[1]}</p>
+                                              <p class="text-xs text-gray-600">${weekData.count} káv</p>
+                                            </div>
+                                          </div>
+                                          <p class="font-bold text-amber-600 text-sm">${weekData.total} Kč</p>
+                                        </button>
+                                        ${isWeekExpanded ? `<div class="px-2 pb-2 space-y-1">
+                                          ${Object.keys(weekData.days).sort((a, b) => b.localeCompare(a)).map(day => {
+                                            const dayData = weekData.days[day];
+                                            return `
+                                              <div class="ml-4 border-l-4 border-green-200 pl-3">
+                                                <p class="text-sm font-semibold text-gray-700">${this.formatDateShort(day)} - ${dayData.count} káv (${dayData.total} Kč)</p>
+                                                <div class="ml-2 space-y-1 mt-1">
+                                                  ${dayData.logs.map(log => `
+                                                    <div class="text-xs p-2 bg-gray-50 rounded">
+                                                      <span class="font-semibold">${log.count}x káva</span>
+                                                      ${log.coffeeName ? `<span class="text-amber-600"> • ${log.coffeeName}</span>` : ''}
+                                                      <span class="text-gray-500"> • ${new Date(log.timestamp).toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit' })}</span>
+                                                      <span class="text-amber-600 float-right">${log.count * log.price} Kč</span>
+                                                    </div>
+                                                  `).join('')}
+                                                </div>
+                                              </div>
+                                            `;
+                                          }).join('')}
+                                        </div>` : ''}
+                                      </div>
+                                    `;
+                                  }).join('')}
+                                </div>` : ''}
+                              </div>
+                            `;
+                          }).join('')}
+                        </div>` : ''}
+                      </div>
+                    `;
+                  }).join('')}
+                </div>` : '<p class="text-gray-500 text-center py-8">Zatím žádné záznamy</p>'}
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      renderMonthlylog() {
+        return `
+          <div class="min-h-screen bg-gradient-to-br from-amber-50 to-orange-100">
+            <div class="bg-white shadow-md">
+              <div class="max-w-4xl mx-auto px-4 py-4 flex items-center gap-3">
+                <button id="back" class="text-gray-600 hover:text-gray-800">◀️</button>
+                <div><h1 class="text-xl font-bold">Historie - Tento měsíc</h1><p class="text-sm text-gray-600">${this.state.monthlyTotal} káv</p></div>
+              </div>
+            </div>
+            <div class="max-w-4xl mx-auto p-4">
+              <div class="bg-white rounded-2xl shadow-lg p-6">
+                ${this.state.monthlyLogs.length > 0 ? `<div class="space-y-2">${this.state.monthlyLogs.map(log => `
                   <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                     <div>
-                      <p class="font-semibold">${l.count}x káva</p>
-                      ${l.coffeeName ? `<p class="text-sm text-amber-600">☕ ${l.coffeeName}</p>` : ''}
-                      <p class="text-sm text-gray-600">${this.formatDate(l.timestamp)}</p>
+                      <p class="font-semibold">${log.count}x káva</p>
+                      ${log.coffeeName ? `<p class="text-sm text-amber-600">☕ ${log.coffeeName}</p>` : ''}
+                      <p class="text-sm text-gray-600">${this.formatDate(log.timestamp)}</p>
                     </div>
                     <div class="text-right">
-                      <p class="font-bold text-amber-600">${l.count * l.price} Kč</p>
-                      <p class="text-xs text-gray-500">${l.price} Kč/ks</p>
+                      <p class="font-bold text-amber-600">${log.count * log.price} Kč</p>
+                      <p class="text-xs text-gray-500">${log.price} Kč/ks</p>
                     </div>
                   </div>
-                `).join('')}</div>` : '<p class="text-gray-500 text-center py-8">Žádné záznamy</p>'}
+                `).join('')}</div>` : '<p class="text-gray-500 text-center py-8">Žádné záznamy tento měsíc</p>'}
               </div>
             </div>
           </div>
@@ -617,7 +788,23 @@
           document.getElementById('adminBtn')?.addEventListener('click', () => { s.view = 'admin'; this.render(); });
         }
 
-        if (s.view === 'alltimelog' || s.view === 'monthlylog') {
+        if (s.view === 'alltimelog') {
+          document.getElementById('back')?.addEventListener('click', () => { s.view = 'main'; this.render(); });
+          
+          document.querySelectorAll('[data-toggle-year]').forEach(btn => {
+            btn.addEventListener('click', () => this.toggleYear(btn.dataset.toggleYear));
+          });
+          
+          document.querySelectorAll('[data-toggle-month]').forEach(btn => {
+            btn.addEventListener('click', () => this.toggleMonth(btn.dataset.toggleMonth));
+          });
+          
+          document.querySelectorAll('[data-toggle-week]').forEach(btn => {
+            btn.addEventListener('click', () => this.toggleWeek(btn.dataset.toggleWeek));
+          });
+        }
+
+        if (s.view === 'monthlylog') {
           document.getElementById('back')?.addEventListener('click', () => { s.view = 'main'; this.render(); });
         }
 
