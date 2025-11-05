@@ -61,6 +61,7 @@
           view: 'login',
           userId: null,
           userName: '',
+          userEmail: '',
           coffeeCount: 0,
           monthlyTotal: 0,
           coffeePrice: 15,
@@ -69,23 +70,30 @@
           allUsers: [],
           allTimeLogs: [],
           monthlyLogs: [],
-          loginCode: '',
+          loginEmail: '',
+          loginPassword: '',
           newUserName: '',
+          newUserEmail: '',
+          newUserPassword: '',
           newPrice: '15',
           newCoffeeName: '',
           customCount: '',
-          adminEmail: '',
-          adminPassword: '',
-          showAdminLogin: false,
           expandedYears: new Set(),
           expandedMonths: new Set(),
           expandedWeeks: new Set()
         };
 
-        onAuthStateChanged(auth, (user) => {
-          if (user && user.email === ADMIN_EMAIL) {
-            this.state.isAdmin = true;
-            localStorage.setItem('coffeeAdmin', 'true');
+        onAuthStateChanged(auth, async (user) => {
+          if (user) {
+            this.state.userId = user.uid;
+            this.state.userEmail = user.email;
+            this.state.isAdmin = user.email === ADMIN_EMAIL;
+            
+            if (this.state.view === 'login') {
+              await this.loadUserData(user.uid);
+              this.state.view = 'main';
+              this.render();
+            }
           }
         });
       }
@@ -101,10 +109,6 @@
           return true;
         }
         return new Date().getDate() === 1;
-      }
-
-      generateCode() {
-        return Math.floor(100000 + Math.random() * 900000).toString();
       }
 
       formatDate(ts) {
@@ -172,63 +176,36 @@
           await storage.set('coffee:global:price', JSON.stringify({ price: 15, name: '' }));
         }
 
-        const code = localStorage.getItem('coffeeUserCode');
-        if (code) {
-          await this.login(code);
-        } else {
-          this.render();
-        }
-
-        this.state.isAdmin = localStorage.getItem('coffeeAdmin') === 'true';
+        this.render();
       }
 
-      async login(code) {
+      async userLogin() {
         try {
-          const u = await storage.get(`user:${code}`);
-          const userData = JSON.parse(u.value);
-          this.state.userId = code;
-          this.state.userName = userData.name;
-          localStorage.setItem('coffeeUserCode', code);
-          await this.loadUserData(code);
-          this.state.view = 'main';
-          this.render();
-        } catch (e) {
-          alert('Neplatný kód!');
-        }
-      }
-
-      async adminLogin() {
-        try {
-          const userCredential = await signInWithEmailAndPassword(auth, this.state.adminEmail, this.state.adminPassword);
-          if (userCredential.user.email === ADMIN_EMAIL) {
-            this.state.isAdmin = true;
-            localStorage.setItem('coffeeAdmin', 'true');
-            this.state.view = 'admin';
-            await this.loadUsers();
-            this.render();
-          } else {
-            await signOut(auth);
-            alert('Pouze admin má přístup!');
-          }
+          await signInWithEmailAndPassword(auth, this.state.loginEmail, this.state.loginPassword);
+          // onAuthStateChanged se postará o zbytek
         } catch (error) {
-          console.error('Admin login error:', error);
+          console.error('Login error:', error);
           if (error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
             alert('Špatný email nebo heslo!');
           } else if (error.code === 'auth/invalid-email') {
             alert('Neplatný email!');
           } else if (error.code === 'auth/too-many-requests') {
             alert('Příliš mnoho pokusů. Zkuste to později.');
+          } else if (error.code === 'auth/invalid-credential') {
+            alert('Neplatné přihlašovací údaje!');
           } else {
             alert('Chyba přihlášení: ' + error.message);
           }
         }
       }
 
-      async adminLogout() {
+      async logout() {
         try {
           await signOut(auth);
+          this.state.userId = null;
+          this.state.userName = '';
+          this.state.userEmail = '';
           this.state.isAdmin = false;
-          localStorage.removeItem('coffeeAdmin');
           this.state.view = 'login';
           this.render();
         } catch (error) {
@@ -236,20 +213,29 @@
         }
       }
 
-      async loadUserData(code) {
+      async loadUserData(uid) {
         const month = this.getCurrentMonth();
+        
         try {
-          const m = await storage.get(`coffee:${code}:${month}`);
+          const userProfile = await storage.get(`user:${uid}`);
+          const userData = JSON.parse(userProfile.value);
+          this.state.userName = userData.name;
+        } catch (e) {
+          this.state.userName = this.state.userEmail.split('@')[0];
+        }
+
+        try {
+          const m = await storage.get(`coffee:${uid}:${month}`);
           this.state.monthlyTotal = JSON.parse(m.value).total || 0;
         } catch (e) { this.state.monthlyTotal = 0; }
 
         try {
-          const t = await storage.get(`coffee:${code}:total`);
+          const t = await storage.get(`coffee:${uid}:total`);
           this.state.coffeeCount = JSON.parse(t.value).count || 0;
         } catch (e) { this.state.coffeeCount = 0; }
 
         try {
-          const l = await storage.get(`coffee:${code}:logs`);
+          const l = await storage.get(`coffee:${uid}:logs`);
           const logs = JSON.parse(l.value);
           this.state.allTimeLogs = logs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
           this.state.monthlyLogs = logs.filter(log => log.month === month).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
@@ -265,15 +251,20 @@
         const keys = await storage.list('user:');
         const users = [];
         const month = this.getCurrentMonth();
+        
         for (const k of keys.keys) {
           try {
-            const code = k.replace('user:', '');
+            const uid = k.replace('user:', '');
             const u = await storage.get(k);
-            const m = await storage.get(`coffee:${code}:${month}`).catch(() => ({ value: '{"total":0}' }));
-            const t = await storage.get(`coffee:${code}:total`).catch(() => ({ value: '{"count":0}' }));
+            const userData = JSON.parse(u.value);
+            
+            const m = await storage.get(`coffee:${uid}:${month}`).catch(() => ({ value: '{"total":0}' }));
+            const t = await storage.get(`coffee:${uid}:total`).catch(() => ({ value: '{"count":0}' }));
+            
             users.push({
-              code,
-              name: JSON.parse(u.value).name,
+              uid: uid,
+              name: userData.name,
+              email: userData.email,
               monthlyTotal: JSON.parse(m.value).total || 0,
               allTimeCount: JSON.parse(t.value).count || 0
             });
@@ -326,22 +317,46 @@
       }
 
       async createUser() {
-        if (!this.state.newUserName.trim()) return alert('Zadej jméno!');
-        const code = this.generateCode();
-        const month = this.getCurrentMonth();
-        
-        await storage.set(`user:${code}`, JSON.stringify({
-          code, name: this.state.newUserName.trim(), createdAt: new Date().toISOString()
-        }));
-        await storage.set(`coffee:${code}:${month}`, JSON.stringify({ total: 0, userName: this.state.newUserName.trim() }));
-        await storage.set(`coffee:${code}:total`, JSON.stringify({ count: 0 }));
-        await storage.set(`coffee:${code}:logs`, JSON.stringify([]));
+        if (!this.state.newUserName.trim() || !this.state.newUserEmail.trim() || !this.state.newUserPassword.trim()) {
+          return alert('Vyplň všechna pole!');
+        }
 
-        this.state.newUserName = '';
-        await this.loadUsers();
-        alert(`Kód: ${code}`);
-        try { await navigator.clipboard.writeText(code); alert('Zkopírováno!'); } catch (e) { }
-        this.render();
+        alert('⚠️ DŮLEŽITÉ:\n\n1. Nejdřív vytvoř uživatele v Firebase Authentication!\n2. Firebase Console → Authentication → Users → Add user\n3. Email: ' + this.state.newUserEmail + '\n4. Password: ' + this.state.newUserPassword + '\n5. Až pak klikni OK zde.');
+
+        try {
+          const userUid = prompt('Zadej UID nového uživatele z Firebase Console (najdeš ho v seznamu uživatelů):');
+          
+          if (!userUid) {
+            alert('Zrušeno.');
+            return;
+          }
+
+          const month = this.getCurrentMonth();
+          
+          await storage.set(`user:${userUid}`, JSON.stringify({
+            name: this.state.newUserName.trim(),
+            email: this.state.newUserEmail.trim(),
+            createdAt: new Date().toISOString()
+          }));
+          
+          await storage.set(`coffee:${userUid}:${month}`, JSON.stringify({ 
+            total: 0, 
+            userName: this.state.newUserName.trim() 
+          }));
+          
+          await storage.set(`coffee:${userUid}:total`, JSON.stringify({ count: 0 }));
+          await storage.set(`coffee:${userUid}:logs`, JSON.stringify([]));
+
+          this.state.newUserName = '';
+          this.state.newUserEmail = '';
+          this.state.newUserPassword = '';
+          
+          await this.loadUsers();
+          alert('✅ Uživatel vytvořen!\n\nEmail: ' + this.state.newUserEmail + '\nHeslo: ' + this.state.newUserPassword + '\n\nPředej tyto údaje uživateli.');
+          this.render();
+        } catch (error) {
+          alert('Chyba: ' + error.message);
+        }
       }
 
       async updatePrice() {
@@ -392,56 +407,31 @@
       }
 
       renderLogin() {
-        if (this.state.showAdminLogin) {
-          return `
-            <div class="min-h-screen bg-gradient-to-br from-amber-50 to-orange-100 flex items-center justify-center p-4">
-              <div class="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full">
-                <div class="text-6xl text-center mb-6">☕</div>
-                <h2 class="text-2xl font-bold text-gray-800 mb-2 text-center">Admin Přihlášení</h2>
-                <p class="text-gray-600 mb-6 text-center">Zabezpečené přihlášení přes Firebase</p>
-                
-                <div class="mb-4">
-                  <label class="block text-sm font-semibold text-gray-700 mb-2">Email</label>
-                  <input type="email" id="adminEmail" placeholder="admin@email.cz" 
-                    class="w-full px-4 py-3 border-2 rounded-xl text-lg outline-none focus:border-amber-500">
-                </div>
-                
-                <div class="mb-6">
-                  <label class="block text-sm font-semibold text-gray-700 mb-2">Heslo</label>
-                  <input type="password" id="adminPassword" placeholder="••••••••" 
-                    class="w-full px-4 py-3 border-2 rounded-xl text-lg outline-none focus:border-amber-500">
-                </div>
-                
-                <button id="adminLoginBtn" class="w-full bg-gray-800 text-white py-3 rounded-xl font-semibold hover:bg-gray-900 mb-3">
-                  🔐 Přihlásit jako Admin
-                </button>
-                
-                <button id="backToUser" class="w-full text-gray-600 py-2 rounded-xl hover:bg-gray-100">
-                  ← Zpět na uživatelské přihlášení
-                </button>
-              </div>
-            </div>
-          `;
-        }
-
         return `
           <div class="min-h-screen bg-gradient-to-br from-amber-50 to-orange-100 flex items-center justify-center p-4">
             <div class="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full">
               <div class="text-6xl text-center mb-6">☕</div>
               <h2 class="text-2xl font-bold text-gray-800 mb-2 text-center">Coffee Tracker</h2>
-              <p class="text-gray-600 mb-6 text-center">Přihlaš se svým kódem</p>
-              <input type="text" id="code" maxlength="6" placeholder="6místný kód" 
-                class="w-full px-4 py-3 border-2 rounded-xl mb-4 text-lg text-center font-mono tracking-widest focus:border-amber-500 outline-none">
+              <p class="text-gray-600 mb-6 text-center">Přihlášení</p>
+              
+              <div class="mb-4">
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Email</label>
+                <input type="email" id="loginEmail" placeholder="tvuj@email.cz" 
+                  class="w-full px-4 py-3 border-2 rounded-xl text-lg outline-none focus:border-amber-500">
+              </div>
+              
+              <div class="mb-6">
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Heslo</label>
+                <input type="password" id="loginPassword" placeholder="••••••••" 
+                  class="w-full px-4 py-3 border-2 rounded-xl text-lg outline-none focus:border-amber-500">
+              </div>
+              
               <button id="loginBtn" class="w-full bg-blue-600 text-white py-3 rounded-xl font-semibold hover:bg-blue-700 mb-3">
-                Přihlásit se
+                🔐 Přihlásit se
               </button>
-              <div class="relative my-6"><div class="absolute inset-0 flex items-center"><div class="w-full border-t"></div></div>
-              <div class="relative flex justify-center text-sm"><span class="px-4 bg-white text-gray-500">nebo</span></div></div>
-              <button id="showAdminBtn" class="w-full bg-gray-800 text-white py-3 rounded-xl font-semibold hover:bg-gray-900">
-                ⚙️ Admin přístup
-              </button>
+
               <p class="text-xs text-gray-500 text-center mt-4">
-                Nemáš přihlašovací kód? Požádej admina o vytvoření účtu.
+                Nemáš přihlašovací údaje? Požádej admina o vytvoření účtu.
               </p>
             </div>
           </div>
@@ -510,12 +500,8 @@
                   <p>Potvrď platbu za minulý měsíc.</p>
                 </div>
               ` : ''}
-              <div class="bg-blue-50 rounded-xl p-4 text-sm">
-                <div class="flex justify-between items-start mb-2">
-                  <div><p class="mb-1">🔑 <strong>Kód:</strong></p><p class="text-2xl font-mono font-bold text-blue-600">${s.userId}</p></div>
-                  <button id="copyBtn" class="bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700">📋</button>
-                </div>
-                <p class="text-xs text-gray-600">Ulož si ho pro přihlášení z jiného zařízení.</p>
+              <div class="bg-green-50 rounded-xl p-4 text-sm border-2 border-green-200">
+                <p class="text-green-700">🔐 <strong>Zabezpečeno:</strong> Přihlášen jako ${s.userEmail}</p>
               </div>
             </div>
           </div>
@@ -665,15 +651,9 @@
                   <button id="back" class="text-gray-600 hover:text-gray-800">◀️</button>
                   <h1 class="text-xl font-bold">Admin</h1>
                 </div>
-                <button id="adminLogoutBtn" class="text-red-600 hover:text-red-700 font-semibold text-sm">
-                  Odhlásit Admin
-                </button>
               </div>
             </div>
             <div class="max-w-4xl mx-auto p-4 space-y-4">
-              <div class="bg-green-50 rounded-xl p-4 border-2 border-green-200">
-                <p class="text-sm text-green-700">🔐 <strong>Zabezpečeno:</strong> Přihlášen přes Firebase Authentication</p>
-              </div>
               <div class="bg-white rounded-2xl shadow-lg p-6">
                 <h2 class="text-lg font-bold mb-4">Nastavení kávy</h2>
                 <div class="mb-4">
@@ -693,12 +673,36 @@
                 </div>
                 <button id="savePrice" class="w-full bg-amber-600 text-white py-3 rounded-xl font-semibold hover:bg-amber-700">Uložit</button>
               </div>
+              
               <div class="bg-white rounded-2xl shadow-lg p-6">
                 <h2 class="text-lg font-bold mb-4">Vytvořit uživatele</h2>
-                <input type="text" id="newUser" value="${s.newUserName}" placeholder="Jméno" 
-                  class="w-full px-4 py-3 border-2 rounded-xl text-lg mb-4 outline-none focus:border-amber-500">
+                <div class="bg-yellow-50 border-2 border-yellow-200 rounded-xl p-3 mb-4 text-sm">
+                  <p class="font-bold text-yellow-800 mb-1">⚠️ Postup:</p>
+                  <ol class="text-yellow-700 list-decimal ml-4 space-y-1">
+                    <li>Vyplň údaje níže</li>
+                    <li>Vytvoř uživatele v Firebase Console (Authentication → Add user)</li>
+                    <li>Zkopíruj UID z Firebase</li>
+                    <li>Klikni "Vytvořit" a vlož UID</li>
+                  </ol>
+                </div>
+                <div class="mb-3">
+                  <label class="block text-sm font-semibold mb-2">Jméno</label>
+                  <input type="text" id="newUserName" value="${s.newUserName}" placeholder="Jan Novák" 
+                    class="w-full px-4 py-3 border-2 rounded-xl text-lg outline-none focus:border-amber-500">
+                </div>
+                <div class="mb-3">
+                  <label class="block text-sm font-semibold mb-2">Email</label>
+                  <input type="email" id="newUserEmail" value="${s.newUserEmail}" placeholder="jan@firma.cz" 
+                    class="w-full px-4 py-3 border-2 rounded-xl text-lg outline-none focus:border-amber-500">
+                </div>
+                <div class="mb-4">
+                  <label class="block text-sm font-semibold mb-2">Heslo</label>
+                  <input type="text" id="newUserPassword" value="${s.newUserPassword}" placeholder="Silné heslo" 
+                    class="w-full px-4 py-3 border-2 rounded-xl text-lg outline-none focus:border-amber-500">
+                </div>
                 <button id="createUser" class="w-full bg-blue-600 text-white py-3 rounded-xl font-semibold hover:bg-blue-700">➕ Vytvořit</button>
               </div>
+
               <div class="bg-white rounded-2xl shadow-lg p-6">
                 <div class="flex justify-between items-center mb-4">
                   <h2 class="text-lg font-bold">Uživatelé</h2>
@@ -708,7 +712,7 @@
                   <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                     <div>
                       <p class="font-semibold">${u.name}</p>
-                      <p class="text-xs text-gray-500">Kód: ${u.code}</p>
+                      <p class="text-xs text-gray-500">${u.email}</p>
                       <p class="text-sm text-gray-600">Měsíc: ${u.monthlyTotal} káv</p>
                     </div>
                     <div class="text-right">
@@ -727,50 +731,21 @@
         const s = this.state;
         
         if (s.view === 'login') {
-          if (s.showAdminLogin) {
-            const emailInput = document.getElementById('adminEmail');
-            const passInput = document.getElementById('adminPassword');
-            const adminLoginBtn = document.getElementById('adminLoginBtn');
-            const backToUser = document.getElementById('backToUser');
+          const emailInput = document.getElementById('loginEmail');
+          const passInput = document.getElementById('loginPassword');
+          const loginBtn = document.getElementById('loginBtn');
 
-            emailInput?.addEventListener('input', e => s.adminEmail = e.target.value);
-            passInput?.addEventListener('input', e => s.adminPassword = e.target.value);
-            passInput?.addEventListener('keypress', e => {
-              if (e.key === 'Enter') this.adminLogin();
-            });
-            adminLoginBtn?.addEventListener('click', () => this.adminLogin());
-            backToUser?.addEventListener('click', () => {
-              s.showAdminLogin = false;
-              this.render();
-            });
-          } else {
-            const code = document.getElementById('code');
-            const loginBtn = document.getElementById('loginBtn');
-            const showAdminBtn = document.getElementById('showAdminBtn');
-            
-            code?.addEventListener('input', e => {
-              e.target.value = e.target.value.replace(/\D/g, '').substring(0, 6);
-              s.loginCode = e.target.value;
-            });
-            code?.addEventListener('keypress', e => {
-              if (e.key === 'Enter' && s.loginCode.length === 6) this.login(s.loginCode);
-            });
-            loginBtn?.addEventListener('click', () => s.loginCode.length === 6 && this.login(s.loginCode));
-            showAdminBtn?.addEventListener('click', () => {
-              s.showAdminLogin = true;
-              this.render();
-            });
-          }
+          emailInput?.addEventListener('input', e => s.loginEmail = e.target.value);
+          passInput?.addEventListener('input', e => s.loginPassword = e.target.value);
+          passInput?.addEventListener('keypress', e => {
+            if (e.key === 'Enter') this.userLogin();
+          });
+          loginBtn?.addEventListener('click', () => this.userLogin());
         }
 
         if (s.view === 'main') {
           document.getElementById('logoutBtn')?.addEventListener('click', () => {
-            if (confirm('Odhlásit?')) {
-              localStorage.removeItem('coffeeUserCode');
-              s.userId = null;
-              s.view = 'login';
-              this.render();
-            }
+            if (confirm('Odhlásit?')) this.logout();
           });
           document.getElementById('allLog')?.addEventListener('click', () => { s.view = 'alltimelog'; this.render(); });
           document.getElementById('monthLog')?.addEventListener('click', () => { s.view = 'monthlylog'; this.render(); });
@@ -781,10 +756,6 @@
             if (val > 0) this.addCoffee(val);
           });
           document.getElementById('payBtn')?.addEventListener('click', () => this.confirmPayment());
-          document.getElementById('copyBtn')?.addEventListener('click', () => {
-            navigator.clipboard.writeText(s.userId);
-            alert('Zkopírováno!');
-          });
           document.getElementById('adminBtn')?.addEventListener('click', () => { s.view = 'admin'; this.render(); });
         }
 
@@ -810,11 +781,12 @@
 
         if (s.view === 'admin') {
           document.getElementById('back')?.addEventListener('click', () => { s.view = 'main'; this.render(); });
-          document.getElementById('adminLogoutBtn')?.addEventListener('click', () => this.adminLogout());
           document.getElementById('newName')?.addEventListener('input', e => s.newCoffeeName = e.target.value);
           document.getElementById('newPrice')?.addEventListener('input', e => s.newPrice = e.target.value);
           document.getElementById('savePrice')?.addEventListener('click', () => this.updatePrice());
-          document.getElementById('newUser')?.addEventListener('input', e => s.newUserName = e.target.value);
+          document.getElementById('newUserName')?.addEventListener('input', e => s.newUserName = e.target.value);
+          document.getElementById('newUserEmail')?.addEventListener('input', e => s.newUserEmail = e.target.value);
+          document.getElementById('newUserPassword')?.addEventListener('input', e => s.newUserPassword = e.target.value);
           document.getElementById('createUser')?.addEventListener('click', () => this.createUser());
           document.getElementById('refresh')?.addEventListener('click', () => this.loadUsers().then(() => this.render()));
         }
