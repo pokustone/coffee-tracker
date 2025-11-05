@@ -17,6 +17,7 @@
   <script type="module">
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
     import { getFirestore, collection, doc, getDoc, setDoc, getDocs, query } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+    import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 
     const firebaseConfig = {
       apiKey: "AIzaSyA0jwdsajnjCHkTh0thPMgsJXyP3XE61CI",
@@ -30,8 +31,9 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
-    const ADMIN_PASSWORD = "admin123";
+    const auth = getAuth(app);
     const BANK_ACCOUNT = "123456789/0100";
+    const ADMIN_EMAIL = "nemec.jakub@gmail.com";
 
     window.storage = {
       async get(key) {
@@ -71,8 +73,18 @@
           newUserName: '',
           newPrice: '15',
           newCoffeeName: '',
-          customCount: ''
+          customCount: '',
+          adminEmail: '',
+          adminPassword: '',
+          showAdminLogin: false
         };
+
+        onAuthStateChanged(auth, (user) => {
+          if (user && user.email === ADMIN_EMAIL) {
+            this.state.isAdmin = true;
+            localStorage.setItem('coffeeAdmin', 'true');
+          }
+        });
       }
 
       getCurrentMonth() {
@@ -128,6 +140,45 @@
           this.render();
         } catch (e) {
           alert('Neplatný kód!');
+        }
+      }
+
+      async adminLogin() {
+        try {
+          const userCredential = await signInWithEmailAndPassword(auth, this.state.adminEmail, this.state.adminPassword);
+          if (userCredential.user.email === ADMIN_EMAIL) {
+            this.state.isAdmin = true;
+            localStorage.setItem('coffeeAdmin', 'true');
+            this.state.view = 'admin';
+            await this.loadUsers();
+            this.render();
+          } else {
+            await signOut(auth);
+            alert('Pouze admin má přístup!');
+          }
+        } catch (error) {
+          console.error('Admin login error:', error);
+          if (error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
+            alert('Špatný email nebo heslo!');
+          } else if (error.code === 'auth/invalid-email') {
+            alert('Neplatný email!');
+          } else if (error.code === 'auth/too-many-requests') {
+            alert('Příliš mnoho pokusů. Zkuste to později.');
+          } else {
+            alert('Chyba přihlášení: ' + error.message);
+          }
+        }
+      }
+
+      async adminLogout() {
+        try {
+          await signOut(auth);
+          this.state.isAdmin = false;
+          localStorage.removeItem('coffeeAdmin');
+          this.state.view = 'login';
+          this.render();
+        } catch (error) {
+          console.error('Logout error:', error);
         }
       }
 
@@ -260,6 +311,38 @@
       }
 
       renderLogin() {
+        if (this.state.showAdminLogin) {
+          return `
+            <div class="min-h-screen bg-gradient-to-br from-amber-50 to-orange-100 flex items-center justify-center p-4">
+              <div class="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full">
+                <div class="text-6xl text-center mb-6">☕</div>
+                <h2 class="text-2xl font-bold text-gray-800 mb-2 text-center">Admin Přihlášení</h2>
+                <p class="text-gray-600 mb-6 text-center">Zabezpečené přihlášení přes Firebase</p>
+                
+                <div class="mb-4">
+                  <label class="block text-sm font-semibold text-gray-700 mb-2">Email</label>
+                  <input type="email" id="adminEmail" placeholder="admin@email.cz" 
+                    class="w-full px-4 py-3 border-2 rounded-xl text-lg outline-none focus:border-amber-500">
+                </div>
+                
+                <div class="mb-6">
+                  <label class="block text-sm font-semibold text-gray-700 mb-2">Heslo</label>
+                  <input type="password" id="adminPassword" placeholder="••••••••" 
+                    class="w-full px-4 py-3 border-2 rounded-xl text-lg outline-none focus:border-amber-500">
+                </div>
+                
+                <button id="adminLoginBtn" class="w-full bg-gray-800 text-white py-3 rounded-xl font-semibold hover:bg-gray-900 mb-3">
+                  🔐 Přihlásit jako Admin
+                </button>
+                
+                <button id="backToUser" class="w-full text-gray-600 py-2 rounded-xl hover:bg-gray-100">
+                  ← Zpět na uživatelské přihlášení
+                </button>
+              </div>
+            </div>
+          `;
+        }
+
         return `
           <div class="min-h-screen bg-gradient-to-br from-amber-50 to-orange-100 flex items-center justify-center p-4">
             <div class="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full">
@@ -273,9 +356,12 @@
               </button>
               <div class="relative my-6"><div class="absolute inset-0 flex items-center"><div class="w-full border-t"></div></div>
               <div class="relative flex justify-center text-sm"><span class="px-4 bg-white text-gray-500">nebo</span></div></div>
-              <button id="adminBtn" class="w-full bg-gray-800 text-white py-3 rounded-xl font-semibold hover:bg-gray-900">
+              <button id="showAdminBtn" class="w-full bg-gray-800 text-white py-3 rounded-xl font-semibold hover:bg-gray-900">
                 ⚙️ Admin přístup
               </button>
+              <p class="text-xs text-gray-500 text-center mt-4">
+                Nemáš přihlašovací kód? Požádej admina o vytvoření účtu.
+              </p>
             </div>
           </div>
         `;
@@ -398,12 +484,20 @@
         return `
           <div class="min-h-screen bg-gradient-to-br from-amber-50 to-orange-100">
             <div class="bg-white shadow-md">
-              <div class="max-w-4xl mx-auto px-4 py-4 flex items-center gap-3">
-                <button id="back" class="text-gray-600 hover:text-gray-800">◀️</button>
-                <h1 class="text-xl font-bold">Admin</h1>
+              <div class="max-w-4xl mx-auto px-4 py-4 flex justify-between items-center">
+                <div class="flex items-center gap-3">
+                  <button id="back" class="text-gray-600 hover:text-gray-800">◀️</button>
+                  <h1 class="text-xl font-bold">Admin</h1>
+                </div>
+                <button id="adminLogoutBtn" class="text-red-600 hover:text-red-700 font-semibold text-sm">
+                  Odhlásit Admin
+                </button>
               </div>
             </div>
             <div class="max-w-4xl mx-auto p-4 space-y-4">
+              <div class="bg-green-50 rounded-xl p-4 border-2 border-green-200">
+                <p class="text-sm text-green-700">🔐 <strong>Zabezpečeno:</strong> Přihlášen přes Firebase Authentication</p>
+              </div>
               <div class="bg-white rounded-2xl shadow-lg p-6">
                 <h2 class="text-lg font-bold mb-4">Nastavení kávy</h2>
                 <div class="mb-4">
@@ -456,29 +550,43 @@
       attachListeners() {
         const s = this.state;
         
-        // Login
         if (s.view === 'login') {
-          const code = document.getElementById('code');
-          const loginBtn = document.getElementById('loginBtn');
-          const adminBtn = document.getElementById('adminBtn');
-          
-          code?.addEventListener('input', e => {
-            e.target.value = e.target.value.replace(/\D/g, '').substring(0, 6);
-            s.loginCode = e.target.value;
-          });
-          loginBtn?.addEventListener('click', () => s.loginCode.length === 6 && this.login(s.loginCode));
-          adminBtn?.addEventListener('click', () => {
-            const pw = prompt('Admin heslo:');
-            if (pw === ADMIN_PASSWORD) {
-              localStorage.setItem('coffeeAdmin', 'true');
-              s.isAdmin = true;
-              s.view = 'admin';
-              this.loadUsers().then(() => this.render());
-            } else alert('Špatné heslo!');
-          });
+          if (s.showAdminLogin) {
+            const emailInput = document.getElementById('adminEmail');
+            const passInput = document.getElementById('adminPassword');
+            const adminLoginBtn = document.getElementById('adminLoginBtn');
+            const backToUser = document.getElementById('backToUser');
+
+            emailInput?.addEventListener('input', e => s.adminEmail = e.target.value);
+            passInput?.addEventListener('input', e => s.adminPassword = e.target.value);
+            passInput?.addEventListener('keypress', e => {
+              if (e.key === 'Enter') this.adminLogin();
+            });
+            adminLoginBtn?.addEventListener('click', () => this.adminLogin());
+            backToUser?.addEventListener('click', () => {
+              s.showAdminLogin = false;
+              this.render();
+            });
+          } else {
+            const code = document.getElementById('code');
+            const loginBtn = document.getElementById('loginBtn');
+            const showAdminBtn = document.getElementById('showAdminBtn');
+            
+            code?.addEventListener('input', e => {
+              e.target.value = e.target.value.replace(/\D/g, '').substring(0, 6);
+              s.loginCode = e.target.value;
+            });
+            code?.addEventListener('keypress', e => {
+              if (e.key === 'Enter' && s.loginCode.length === 6) this.login(s.loginCode);
+            });
+            loginBtn?.addEventListener('click', () => s.loginCode.length === 6 && this.login(s.loginCode));
+            showAdminBtn?.addEventListener('click', () => {
+              s.showAdminLogin = true;
+              this.render();
+            });
+          }
         }
 
-        // Main
         if (s.view === 'main') {
           document.getElementById('logoutBtn')?.addEventListener('click', () => {
             if (confirm('Odhlásit?')) {
@@ -504,14 +612,13 @@
           document.getElementById('adminBtn')?.addEventListener('click', () => { s.view = 'admin'; this.render(); });
         }
 
-        // Logs
         if (s.view === 'alltimelog' || s.view === 'monthlylog') {
           document.getElementById('back')?.addEventListener('click', () => { s.view = 'main'; this.render(); });
         }
 
-        // Admin
         if (s.view === 'admin') {
           document.getElementById('back')?.addEventListener('click', () => { s.view = 'main'; this.render(); });
+          document.getElementById('adminLogoutBtn')?.addEventListener('click', () => this.adminLogout());
           document.getElementById('newName')?.addEventListener('input', e => s.newCoffeeName = e.target.value);
           document.getElementById('newPrice')?.addEventListener('input', e => s.newPrice = e.target.value);
           document.getElementById('savePrice')?.addEventListener('click', () => this.updatePrice());
