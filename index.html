@@ -92,9 +92,14 @@
         return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
       }
 
-      isFirstDay() {
-        return new Date().getDate() === 1;
-      }
+	isFirstDay() {
+  	// Testovací režim přes URL parametr
+  	const urlParams = new URLSearchParams(window.location.search);
+ 	 if (urlParams.get('testFirstDay') === 'true') {
+   	 return true;
+ 	 }
+ 	 return new Date().getDate() === 1;
+	}
 
       generateCode() {
         return Math.floor(100000 + Math.random() * 900000).toString();
