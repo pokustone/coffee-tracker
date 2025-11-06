@@ -97,16 +97,21 @@ onAuthStateChanged(auth, async (user) => {
     console.log('👑 Admin check:', user.email, '===', ADMIN_EMAIL, '?', isAdmin);
     this.state.isAdmin = isAdmin;
     
+    // OPRAVA: Načti data VŽDY, ne jen když view === 'login'
+    console.log('📊 Načítám data uživatele...');
+    await this.loadUserData(user.uid);
+    
+    // Přepni na main view, pokud jsme na loginu
     if (this.state.view === 'login') {
-      console.log('📊 Načítám data uživatele...');
-      await this.loadUserData(user.uid);
       this.state.view = 'main';
     }
     
-    console.log('✅ Render view, isAdmin:', this.state.isAdmin);
-    this.render(); // Vždy re-render
+    console.log('✅ Render view:', this.state.view, 'isAdmin:', this.state.isAdmin);
+    this.render();
   } else {
     console.log('🚪 Odhlášen');
+    this.state.view = 'login';
+    this.render();
   }
 });
       }
