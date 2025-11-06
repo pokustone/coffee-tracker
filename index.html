@@ -83,19 +83,31 @@
           expandedWeeks: new Set()
         };
 
-        onAuthStateChanged(auth, async (user) => {
-          if (user) {
-            this.state.userId = user.uid;
-            this.state.userEmail = user.email;
-            this.state.isAdmin = user.email === ADMIN_EMAIL;
-            
-            if (this.state.view === 'login') {
-              await this.loadUserData(user.uid);
-              this.state.view = 'main';
-              this.render();
-            }
-          }
-        });
+onAuthStateChanged(auth, async (user) => {
+  console.log('🔄 Auth state changed');
+  if (user) {
+    console.log('👤 Přihlášen jako:', user.email);
+    console.log('🔑 UID:', user.uid);
+    
+    this.state.userId = user.uid;
+    this.state.userEmail = user.email;
+    
+    // DŮLEŽITÉ: Porovnání emailu
+    const isAdmin = user.email === ADMIN_EMAIL;
+    console.log('👑 Admin check:', user.email, '===', ADMIN_EMAIL, '?', isAdmin);
+    this.state.isAdmin = isAdmin;
+    
+    if (this.state.view === 'login') {
+      console.log('📊 Načítám data uživatele...');
+      await this.loadUserData(user.uid);
+      this.state.view = 'main';
+      console.log('✅ Render main view, isAdmin:', this.state.isAdmin);
+      this.render();
+    }
+  } else {
+    console.log('🚪 Odhlášen');
+  }
+});
       }
 
       getCurrentMonth() {
@@ -179,25 +191,33 @@
         this.render();
       }
 
-      async userLogin() {
-        try {
-          await signInWithEmailAndPassword(auth, this.state.loginEmail, this.state.loginPassword);
-          // onAuthStateChanged se postará o zbytek
-        } catch (error) {
-          console.error('Login error:', error);
-          if (error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
-            alert('Špatný email nebo heslo!');
-          } else if (error.code === 'auth/invalid-email') {
-            alert('Neplatný email!');
-          } else if (error.code === 'auth/too-many-requests') {
-            alert('Příliš mnoho pokusů. Zkuste to později.');
-          } else if (error.code === 'auth/invalid-credential') {
-            alert('Neplatné přihlašovací údaje!');
-          } else {
-            alert('Chyba přihlášení: ' + error.message);
-          }
-        }
-      }
+async userLogin() {
+  console.log('🔐 Pokus o přihlášení:', this.state.loginEmail);
+  
+  try {
+    const userCredential = await signInWithEmailAndPassword(auth, this.state.loginEmail, this.state.loginPassword);
+    console.log('✅ Přihlášení úspěšné!');
+    console.log('👤 User email:', userCredential.user.email);
+    console.log('🔑 User UID:', userCredential.user.uid);
+    console.log('👑 ADMIN_EMAIL:', ADMIN_EMAIL);
+    console.log('🎯 Je admin?', userCredential.user.email === ADMIN_EMAIL);
+    
+    // onAuthStateChanged se postará o zbytek
+  } catch (error) {
+    console.error('❌ Login error:', error);
+    if (error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
+      alert('Špatný email nebo heslo!');
+    } else if (error.code === 'auth/invalid-email') {
+      alert('Neplatný email!');
+    } else if (error.code === 'auth/too-many-requests') {
+      alert('Příliš mnoho pokusů. Zkuste to později.');
+    } else if (error.code === 'auth/invalid-credential') {
+      alert('Neplatné přihlašovací údaje!');
+    } else {
+      alert('Chyba přihlášení: ' + error.message);
+    }
+  }
+}
 
       async logout() {
         try {
