@@ -101,9 +101,10 @@ onAuthStateChanged(auth, async (user) => {
       console.log('📊 Načítám data uživatele...');
       await this.loadUserData(user.uid);
       this.state.view = 'main';
-      console.log('✅ Render main view, isAdmin:', this.state.isAdmin);
-      this.render();
     }
+    
+    console.log('✅ Render view, isAdmin:', this.state.isAdmin);
+    this.render(); // Vždy re-render
   } else {
     console.log('🚪 Odhlášen');
   }
