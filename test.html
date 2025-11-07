@@ -175,35 +175,44 @@
         }
       }
 
-      async userLogin() {
-        if (this.state.isLoggingIn) return;
-        
-        console.log('🔐 Pokus o přihlášení:', this.state.loginEmail);
-        this.state.isLoggingIn = true;
-        
-        try {
-          const userCredential = await signInWithEmailAndPassword(auth, this.state.loginEmail, this.state.loginPassword);
-          console.log('✅ Přihlášení úspěšné!');
-          console.log('👤 User email:', userCredential.user.email);
-          console.log('🔑 User UID:', userCredential.user.uid);
-          
-          // Načti data uživatele
-          this.state.userId = userCredential.user.uid;
-          this.state.userEmail = userCredential.user.email;
-          
-          // Zkontroluj, jestli je admin
-          this.state.isAdmin = await this.checkIsAdmin(userCredential.user.uid);
-          console.log('👑 Je admin?', this.state.isAdmin);
-          
-          // Načti uživatelská data
-          await this.loadUserData(userCredential.user.uid);
-          
-          // Přepni na main view
-          this.state.view = 'main';
-          console.log('✅ Přepínám na main view');
-          this.render();
-          
-        } catch (error) {
+async userLogin() {
+  if (this.state.isLoggingIn) return;
+  
+  console.log('🔐 Pokus o přihlášení:', this.state.loginEmail);
+  this.state.isLoggingIn = true;
+  
+  try {
+    const userCredential = await signInWithEmailAndPassword(auth, this.state.loginEmail, this.state.loginPassword);
+    console.log('✅ Přihlášení úspěšné!');
+    console.log('👤 User email:', userCredential.user.email);
+    console.log('🔑 User UID:', userCredential.user.uid);
+    
+    // Načti data uživatele
+    this.state.userId = userCredential.user.uid;
+    this.state.userEmail = userCredential.user.email;
+    
+    // Načti profil uživatele (včetně kontroly admin)
+    try {
+      const userProfile = await storage.get(`user:${userCredential.user.uid}`);
+      const userData = JSON.parse(userProfile.value);
+      this.state.userName = userData.name;
+      this.state.isAdmin = userData.isAdmin === true;
+      console.log('👑 Je admin?', this.state.isAdmin);
+    } catch (e) {
+      console.warn('⚠️ Nepodařilo se načíst profil uživatele:', e);
+      this.state.userName = this.state.userEmail.split('@')[0];
+      this.state.isAdmin = false;
+    }
+    
+    // Načti coffee logy
+    await this.loadCoffeeLogs(userCredential.user.uid);
+    
+    // Přepni na main view
+    this.state.view = 'main';
+    console.log('✅ Přepínám na main view');
+    this.render();
+    
+  } catch (error) {
           console.error('❌ Login error:', error);
           if (error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
             alert('Špatný email nebo heslo!');
