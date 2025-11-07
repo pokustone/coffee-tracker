@@ -175,59 +175,35 @@
         }
       }
 
-async userLogin() {
-  if (this.state.isLoggingIn) return;
-  
-  console.log('🔐 Pokus o přihlášení:', this.state.loginEmail);
-  this.state.isLoggingIn = true;
-  
-  try {
-    const userCredential = await signInWithEmailAndPassword(auth, this.state.loginEmail, this.state.loginPassword);
-    console.log('✅ Přihlášení úspěšné!');
-    console.log('👤 User email:', userCredential.user.email);
-    console.log('🔑 User UID:', userCredential.user.uid);
-    
-    // Načti data uživatele
-    this.state.userId = userCredential.user.uid;
-    this.state.userEmail = userCredential.user.email;
-    
-    // Načti uživatelská data (včetně coffee logů)
-    await this.loadUserData(userCredential.user.uid);
-    
-    console.log('👑 Je admin?', this.state.isAdmin);
-    
-    // Přepni na main view
-    this.state.view = 'main';
-    console.log('✅ Přepínám na main view');
-    this.render();
-    
-  } catch (error) {
-    console.error('❌ Login error:', error);
-    if (error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
-      alert('Špatný email nebo heslo!');
-    } else if (error.code === 'auth/invalid-email') {
-      alert('Neplatný email!');
-    } else if (error.code === 'auth/too-many-requests') {
-      alert('Příliš mnoho pokusů. Zkuste to později.');
-    } else if (error.code === 'auth/invalid-credential') {
-      alert('Neplatné přihlašovací údaje!');
-    } else {
-      alert('Chyba přihlášení: ' + error.message);
-    }
-  } finally {
-    this.state.isLoggingIn = false;
-  }
-}
-    
-    // Načti coffee logy
-    await this.loadCoffeeLogs(userCredential.user.uid);
-    
-    // Přepni na main view
-    this.state.view = 'main';
-    console.log('✅ Přepínám na main view');
-    this.render();
-    
-  } catch (error) {
+      async userLogin() {
+        if (this.state.isLoggingIn) return;
+        
+        console.log('🔐 Pokus o přihlášení:', this.state.loginEmail);
+        this.state.isLoggingIn = true;
+        
+        try {
+          const userCredential = await signInWithEmailAndPassword(auth, this.state.loginEmail, this.state.loginPassword);
+          console.log('✅ Přihlášení úspěšné!');
+          console.log('👤 User email:', userCredential.user.email);
+          console.log('🔑 User UID:', userCredential.user.uid);
+          
+          // Načti data uživatele
+          this.state.userId = userCredential.user.uid;
+          this.state.userEmail = userCredential.user.email;
+          
+          // Zkontroluj, jestli je admin
+          this.state.isAdmin = await this.checkIsAdmin(userCredential.user.uid);
+          console.log('👑 Je admin?', this.state.isAdmin);
+          
+          // Načti uživatelská data
+          await this.loadUserData(userCredential.user.uid);
+          
+          // Přepni na main view
+          this.state.view = 'main';
+          console.log('✅ Přepínám na main view');
+          this.render();
+          
+        } catch (error) {
           console.error('❌ Login error:', error);
           if (error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
             alert('Špatný email nebo heslo!');
@@ -259,47 +235,41 @@ async userLogin() {
         }
       }
 
-async loadUserData(uid) {
-  const month = this.getCurrentMonth();
-  
-  // Načti profil uživatele
-  try {
-    const userProfile = await storage.get(`user:${uid}`);
-    const userData = JSON.parse(userProfile.value);
-    this.state.userName = userData.name;
-    this.state.isAdmin = userData.isAdmin === true;
-  } catch (e) {
-    console.warn('⚠️ Nepodařilo se načíst profil:', e);
-    this.state.userName = this.state.userEmail.split('@')[0];
-    this.state.isAdmin = false;
-  }
+      async loadUserData(uid) {
+        const month = this.getCurrentMonth();
+        
+        try {
+          const userProfile = await storage.get(`user:${uid}`);
+          const userData = JSON.parse(userProfile.value);
+          this.state.userName = userData.name;
+          this.state.isAdmin = userData.isAdmin === true;
+        } catch (e) {
+          this.state.userName = this.state.userEmail.split('@')[0];
+          this.state.isAdmin = false;
+        }
 
-  // Načti měsíční statistiky
-  try {
-    const m = await storage.get(`coffee:${uid}:${month}`);
-    this.state.monthlyTotal = JSON.parse(m.value).total || 0;
-  } catch (e) { this.state.monthlyTotal = 0; }
+        try {
+          const m = await storage.get(`coffee:${uid}:${month}`);
+          this.state.monthlyTotal = JSON.parse(m.value).total || 0;
+        } catch (e) { this.state.monthlyTotal = 0; }
 
-  // Načti celkový počet káv
-  try {
-    const t = await storage.get(`coffee:${uid}:total`);
-    this.state.coffeeCount = JSON.parse(t.value).count || 0;
-  } catch (e) { this.state.coffeeCount = 0; }
+        try {
+          const t = await storage.get(`coffee:${uid}:total`);
+          this.state.coffeeCount = JSON.parse(t.value).count || 0;
+        } catch (e) { this.state.coffeeCount = 0; }
 
-  // Načti logy
-  try {
-    const l = await storage.get(`coffee:${uid}:logs`);
-    const logs = JSON.parse(l.value);
-    this.state.allTimeLogs = logs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-    this.state.monthlyLogs = logs.filter(log => log.month === month).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-  } catch (e) {
-    this.state.allTimeLogs = [];
-    this.state.monthlyLogs = [];
-  }
+        try {
+          const l = await storage.get(`coffee:${uid}:logs`);
+          const logs = JSON.parse(l.value);
+          this.state.allTimeLogs = logs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+          this.state.monthlyLogs = logs.filter(log => log.month === month).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+        } catch (e) {
+          this.state.allTimeLogs = [];
+          this.state.monthlyLogs = [];
+        }
 
-  // Pokud je admin, načti všechny uživatele
-  if (this.state.isAdmin) await this.loadUsers();
-}
+        if (this.state.isAdmin) await this.loadUsers();
+      }
 
       async loadUsers() {
         const keys = await storage.list('user:');
