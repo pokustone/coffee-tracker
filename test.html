@@ -9,6 +9,24 @@
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: system-ui, -apple-system, sans-serif; }
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 1rem;
+    }
+    .modal-content {
+      background: white;
+      border-radius: 1rem;
+      max-width: 500px;
+      width: 100%;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
   </style>
 </head>
 <body>
@@ -16,7 +34,7 @@
 
   <script type="module">
     import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-    import { getFirestore, collection, doc, getDoc, setDoc, getDocs, query } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+    import { getFirestore, collection, doc, getDoc, setDoc, getDocs, query, deleteDoc, updateDoc, increment, arrayUnion, arrayRemove } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
     import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
 
     const firebaseConfig = {
@@ -32,7 +50,8 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
     const auth = getAuth(app);
-    const BANK_ACCOUNT = "123456789/0100";
+    const BANK_ACCOUNT = "340840719/0300";
+    const ADMIN_EMAIL = "jnemec@csob.it";
 
     window.storage = {
       async get(key) {
@@ -80,8 +99,43 @@
           expandedYears: new Set(),
           expandedMonths: new Set(),
           expandedWeeks: new Set(),
-          isLoggingIn: false
+          // NOVÉ: pro funkci připsání kávy
+          showUserSelectModal: false,
+          pendingRequests: [],
+          giftCoffeeCount: 1
         };
+
+onAuthStateChanged(auth, async (user) => {
+  console.log('🔄 Auth state changed');
+  if (user) {
+    console.log('👤 Přihlášen jako:', user.email);
+    console.log('🔑 UID:', user.uid);
+    
+    this.state.userId = user.uid;
+    this.state.userEmail = user.email;
+    
+    const isAdmin = user.email === ADMIN_EMAIL;
+    console.log('👑 Admin check:', user.email, '===', ADMIN_EMAIL, '?', isAdmin);
+    this.state.isAdmin = isAdmin;
+    
+    console.log('📊 Načítám data uživatele...');
+    await this.loadUserData(user.uid);
+    
+    // NOVÉ: Načti pending requesty
+    await this.loadPendingRequests();
+    
+    if (this.state.view === 'login') {
+      this.state.view = 'main';
+    }
+    
+    console.log('✅ Render view:', this.state.view, 'isAdmin:', this.state.isAdmin);
+    this.render();
+  } else {
+    console.log('🚪 Odhlášen');
+    this.state.view = 'login';
+    this.render();
+  }
+});
       }
 
       getCurrentMonth() {
@@ -150,254 +204,6 @@
         return grouped;
       }
 
-      async init() {
-        try {
-          const pr = await storage.get('coffee:global:price');
-          const data = JSON.parse(pr.value);
-          this.state.coffeePrice = data.price;
-          this.state.coffeeName = data.name || '';
-          this.state.newPrice = data.price.toString();
-          this.state.newCoffeeName = data.name || '';
-        } catch (e) {
-          await storage.set('coffee:global:price', JSON.stringify({ price: 15, name: '' }));
-        }
-
-        this.render();
-      }
-
-      async checkIsAdmin(uid) {
-        try {
-          const userProfile = await storage.get(`user:${uid}`);
-          const userData = JSON.parse(userProfile.value);
-          return userData.isAdmin === true;
-        } catch (e) {
-          return false;
-        }
-      }
-
-      async userLogin() {
-        if (this.state.isLoggingIn) return;
-        
-        console.log('🔐 Pokus o přihlášení:', this.state.loginEmail);
-        this.state.isLoggingIn = true;
-        
-        try {
-          const userCredential = await signInWithEmailAndPassword(auth, this.state.loginEmail, this.state.loginPassword);
-          console.log('✅ Přihlášení úspěšné!');
-          console.log('👤 User email:', userCredential.user.email);
-          console.log('🔑 User UID:', userCredential.user.uid);
-          
-          // Načti data uživatele
-          this.state.userId = userCredential.user.uid;
-          this.state.userEmail = userCredential.user.email;
-          
-          // Zkontroluj, jestli je admin
-          this.state.isAdmin = await this.checkIsAdmin(userCredential.user.uid);
-          console.log('👑 Je admin?', this.state.isAdmin);
-          
-          // Načti uživatelská data
-          await this.loadUserData(userCredential.user.uid);
-          
-          // Přepni na main view
-          this.state.view = 'main';
-          console.log('✅ Přepínám na main view');
-          this.render();
-          
-        } catch (error) {
-          console.error('❌ Login error:', error);
-          if (error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
-            alert('Špatný email nebo heslo!');
-          } else if (error.code === 'auth/invalid-email') {
-            alert('Neplatný email!');
-          } else if (error.code === 'auth/too-many-requests') {
-            alert('Příliš mnoho pokusů. Zkuste to později.');
-          } else if (error.code === 'auth/invalid-credential') {
-            alert('Neplatné přihlašovací údaje!');
-          } else {
-            alert('Chyba přihlášení: ' + error.message);
-          }
-        } finally {
-          this.state.isLoggingIn = false;
-        }
-      }
-
-      async logout() {
-        try {
-          await signOut(auth);
-          this.state.userId = null;
-          this.state.userName = '';
-          this.state.userEmail = '';
-          this.state.isAdmin = false;
-          this.state.view = 'login';
-          this.render();
-        } catch (error) {
-          console.error('Logout error:', error);
-        }
-      }
-
-      async loadUserData(uid) {
-        const month = this.getCurrentMonth();
-        
-        try {
-          const userProfile = await storage.get(`user:${uid}`);
-          const userData = JSON.parse(userProfile.value);
-          this.state.userName = userData.name;
-          this.state.isAdmin = userData.isAdmin === true;
-        } catch (e) {
-          this.state.userName = this.state.userEmail.split('@')[0];
-          this.state.isAdmin = false;
-        }
-
-        try {
-          const m = await storage.get(`coffee:${uid}:${month}`);
-          this.state.monthlyTotal = JSON.parse(m.value).total || 0;
-        } catch (e) { this.state.monthlyTotal = 0; }
-
-        try {
-          const t = await storage.get(`coffee:${uid}:total`);
-          this.state.coffeeCount = JSON.parse(t.value).count || 0;
-        } catch (e) { this.state.coffeeCount = 0; }
-
-        try {
-          const l = await storage.get(`coffee:${uid}:logs`);
-          const logs = JSON.parse(l.value);
-          this.state.allTimeLogs = logs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-          this.state.monthlyLogs = logs.filter(log => log.month === month).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-        } catch (e) {
-          this.state.allTimeLogs = [];
-          this.state.monthlyLogs = [];
-        }
-
-        if (this.state.isAdmin) await this.loadUsers();
-      }
-
-      async loadUsers() {
-        const keys = await storage.list('user:');
-        const users = [];
-        const month = this.getCurrentMonth();
-        
-        for (const k of keys.keys) {
-          try {
-            const uid = k.replace('user:', '');
-            const u = await storage.get(k);
-            const userData = JSON.parse(u.value);
-            
-            const m = await storage.get(`coffee:${uid}:${month}`).catch(() => ({ value: '{"total":0}' }));
-            const t = await storage.get(`coffee:${uid}:total`).catch(() => ({ value: '{"count":0}' }));
-            
-            users.push({
-              uid: uid,
-              name: userData.name,
-              email: userData.email,
-              monthlyTotal: JSON.parse(m.value).total || 0,
-              allTimeCount: JSON.parse(t.value).count || 0
-            });
-          } catch (e) { }
-        }
-        this.state.allUsers = users.sort((a, b) => b.monthlyTotal - a.monthlyTotal);
-      }
-
-      async addCoffee(count) {
-        if (this.isFirstDay() && this.state.monthlyTotal > 0) {
-          alert('Nejprve potvrď platbu!');
-          return;
-        }
-
-        const month = this.getCurrentMonth();
-        const logs = this.state.allTimeLogs;
-        logs.push({
-          count, price: this.state.coffeePrice, coffeeName: this.state.coffeeName,
-          timestamp: new Date().toISOString(), month
-        });
-
-        await storage.set(`coffee:${this.state.userId}:logs`, JSON.stringify(logs));
-        await storage.set(`coffee:${this.state.userId}:${month}`, JSON.stringify({
-          total: this.state.monthlyTotal + count, userName: this.state.userName
-        }));
-        await storage.set(`coffee:${this.state.userId}:total`, JSON.stringify({
-          count: this.state.coffeeCount + count
-        }));
-
-        this.state.monthlyTotal += count;
-        this.state.coffeeCount += count;
-        await this.loadUserData(this.state.userId);
-        this.render();
-      }
-
-      async confirmPayment() {
-        if (!confirm(`Potvrdit ${this.state.monthlyTotal * this.state.coffeePrice} Kč?`)) return;
-        const month = this.getCurrentMonth();
-        await storage.set(`coffee:${this.state.userId}:payment:${month}`, JSON.stringify({
-          month, coffees: this.state.monthlyTotal, amount: this.state.monthlyTotal * this.state.coffeePrice,
-          paidDate: new Date().toISOString()
-        }));
-        await storage.set(`coffee:${this.state.userId}:${month}`, JSON.stringify({
-          total: 0, userName: this.state.userName
-        }));
-        this.state.monthlyTotal = 0;
-        await this.loadUserData(this.state.userId);
-        alert('Platba potvrzena!');
-        this.render();
-      }
-
-      async createUser() {
-        if (!this.state.newUserName.trim() || !this.state.newUserEmail.trim() || !this.state.newUserPassword.trim()) {
-          return alert('Vyplň všechna pole!');
-        }
-
-        alert('⚠️ DŮLEŽITÉ:\n\n1. Nejdřív vytvoř uživatele v Firebase Authentication!\n2. Firebase Console → Authentication → Users → Add user\n3. Email: ' + this.state.newUserEmail + '\n4. Password: ' + this.state.newUserPassword + '\n5. Až pak klikni OK zde.');
-
-        try {
-          const userUid = prompt('Zadej UID nového uživatele z Firebase Console:');
-          
-          if (!userUid) {
-            alert('Zrušeno.');
-            return;
-          }
-
-          const month = this.getCurrentMonth();
-          
-          await storage.set(`user:${userUid}`, JSON.stringify({
-            name: this.state.newUserName.trim(),
-            email: this.state.newUserEmail.trim(),
-            isAdmin: false,
-            createdAt: new Date().toISOString()
-          }));
-          
-          await storage.set(`coffee:${userUid}:${month}`, JSON.stringify({ 
-            total: 0, 
-            userName: this.state.newUserName.trim() 
-          }));
-          
-          await storage.set(`coffee:${userUid}:total`, JSON.stringify({ count: 0 }));
-          await storage.set(`coffee:${userUid}:logs`, JSON.stringify([]));
-
-          this.state.newUserName = '';
-          this.state.newUserEmail = '';
-          this.state.newUserPassword = '';
-          
-          await this.loadUsers();
-          alert('✅ Uživatel vytvořen!');
-          this.render();
-        } catch (error) {
-          alert('Chyba: ' + error.message);
-        }
-      }
-
-      async updatePrice() {
-        const price = parseInt(this.state.newPrice);
-        if (price > 0) {
-          await storage.set('coffee:global:price', JSON.stringify({
-            price, name: this.state.newCoffeeName.trim()
-          }));
-          this.state.coffeePrice = price;
-          this.state.coffeeName = this.state.newCoffeeName.trim();
-          alert('Uloženo!');
-          this.state.view = 'main';
-          this.render();
-        }
-      }
-
       toggleYear(year) {
         if (this.state.expandedYears.has(year)) {
           this.state.expandedYears.delete(year);
@@ -425,39 +231,384 @@
         this.render();
       }
 
+      async init() {
+        this.render();
+      }
+
+      async loadUserData(userId) {
+        try {
+          const userData = await window.storage.get(`user_${userId}`);
+          const user = userData.value;
+          
+          this.state.userName = user.name || '';
+          this.state.coffeeCount = user.allTimeCount || 0;
+          this.state.monthlyTotal = user.monthlyTotal || 0;
+          
+          const priceData = await window.storage.get('coffeePrice');
+          this.state.coffeePrice = priceData.value || 15;
+          
+          try {
+            const nameData = await window.storage.get('coffeeName');
+            this.state.coffeeName = nameData.value || '';
+          } catch (e) {
+            this.state.coffeeName = '';
+          }
+          
+          const logRes = await window.storage.list(`log_${userId}_`);
+          const logs = await Promise.all(
+            logRes.keys.map(async k => {
+              const d = await window.storage.get(k);
+              return d.value;
+            })
+          );
+          
+          this.state.allTimeLogs = logs.sort((a, b) => b.timestamp - a.timestamp);
+          
+          const currentMonth = this.getCurrentMonth();
+          this.state.monthlyLogs = logs.filter(l => {
+            const logMonth = new Date(l.timestamp).toISOString().slice(0, 7);
+            return logMonth === currentMonth;
+          });
+          
+        } catch (e) {
+          console.error('Chyba při načítání dat:', e);
+        }
+      }
+
+      // NOVÉ: Načíst pending requesty pro aktuálního uživatele
+      async loadPendingRequests() {
+        try {
+          const requestsRef = collection(db, 'pendingCoffeeRequests');
+          const snapshot = await getDocs(requestsRef);
+          
+          this.state.pendingRequests = [];
+          snapshot.forEach(doc => {
+            const data = doc.data();
+            if (data.recipientId === this.state.userId) {
+              this.state.pendingRequests.push({
+                id: doc.id,
+                ...data
+              });
+            }
+          });
+          
+          console.log('📬 Načteno pending requestů:', this.state.pendingRequests.length);
+        } catch (e) {
+          console.error('Chyba při načítání pending requestů:', e);
+        }
+      }
+
+      async loadUsers() {
+        try {
+          const usersRes = await window.storage.list('user_');
+          const users = await Promise.all(
+            usersRes.keys.map(async k => {
+              const d = await window.storage.get(k);
+              return { uid: k.replace('user_', ''), ...d.value };
+            })
+          );
+          this.state.allUsers = users.sort((a, b) => (b.monthlyTotal || 0) - (a.monthlyTotal || 0));
+        } catch (e) {
+          console.error('Chyba při načítání uživatelů:', e);
+        }
+      }
+
+      async userLogin() {
+        const s = this.state;
+        if (!s.loginEmail || !s.loginPassword) {
+          alert('Vyplň email a heslo');
+          return;
+        }
+        
+        try {
+          await signInWithEmailAndPassword(auth, s.loginEmail, s.loginPassword);
+        } catch (err) {
+          console.error('Login error:', err);
+          alert('Špatný email nebo heslo');
+        }
+      }
+
+      async logout() {
+        await signOut(auth);
+      }
+
+      async addCoffee(count) {
+        const s = this.state;
+        const timestamp = Date.now();
+        const logKey = `log_${s.userId}_${timestamp}`;
+        
+        try {
+          await window.storage.set(logKey, {
+            count,
+            price: s.coffeePrice,
+            coffeeName: s.coffeeName,
+            timestamp
+          });
+          
+          const currentMonth = this.getCurrentMonth();
+          
+          const userRef = doc(db, 'storage', `user_${s.userId}`);
+          await updateDoc(userRef, {
+            allTimeCount: increment(count),
+            monthlyTotal: increment(count),
+            [`monthly_${currentMonth}`]: increment(count),
+            value: {
+              name: s.userName,
+              email: s.userEmail,
+              allTimeCount: s.coffeeCount + count,
+              monthlyTotal: s.monthlyTotal + count
+            }
+          });
+          
+          await this.loadUserData(s.userId);
+          this.render();
+        } catch (e) {
+          console.error('Chyba:', e);
+          alert('Nepodařilo se přidat kávu');
+        }
+      }
+
+      // NOVÉ: Odeslat žádost o připsání kávy jinému uživateli
+      async sendCoffeeRequest(recipientId, recipientName, count) {
+        try {
+          const requestId = `${this.state.userId}_${recipientId}_${Date.now()}`;
+          const requestRef = doc(db, 'pendingCoffeeRequests', requestId);
+          
+          await setDoc(requestRef, {
+            senderId: this.state.userId,
+            senderName: this.state.userName,
+            recipientId: recipientId,
+            recipientName: recipientName,
+            count: count,
+            price: this.state.coffeePrice,
+            coffeeName: this.state.coffeeName,
+            timestamp: Date.now(),
+            status: 'pending'
+          });
+          
+          console.log('✅ Žádost odeslána:', requestId);
+          alert(`Žádost o připsání ${count}x káva byla odeslána uživateli ${recipientName}`);
+          
+          this.state.showUserSelectModal = false;
+          this.render();
+        } catch (e) {
+          console.error('Chyba při odesílání žádosti:', e);
+          alert('Nepodařilo se odeslat žádost');
+        }
+      }
+
+      // NOVÉ: Schválit žádost o kávu
+      async acceptCoffeeRequest(request) {
+        try {
+          const timestamp = Date.now();
+          const logKey = `log_${this.state.userId}_${timestamp}`;
+          
+          // Přidat kávu příjemci
+          await window.storage.set(logKey, {
+            count: request.count,
+            price: request.price,
+            coffeeName: request.coffeeName,
+            timestamp,
+            giftFrom: request.senderName
+          });
+          
+          const currentMonth = this.getCurrentMonth();
+          const userRef = doc(db, 'storage', `user_${this.state.userId}`);
+          await updateDoc(userRef, {
+            allTimeCount: increment(request.count),
+            monthlyTotal: increment(request.count),
+            [`monthly_${currentMonth}`]: increment(request.count)
+          });
+          
+          // Smazat request
+          await deleteDoc(doc(db, 'pendingCoffeeRequests', request.id));
+          
+          await this.loadUserData(this.state.userId);
+          await this.loadPendingRequests();
+          
+          alert(`Káva připsána! 🎉`);
+          this.render();
+        } catch (e) {
+          console.error('Chyba při přijímání žádosti:', e);
+          alert('Nepodařilo se přijmout žádost');
+        }
+      }
+
+      // NOVÉ: Odmítnout žádost o kávu (vrátit odesílateli)
+      async rejectCoffeeRequest(request) {
+        try {
+          const timestamp = Date.now();
+          const logKey = `log_${request.senderId}_${timestamp}`;
+          
+          // Přidat kávu odesílateli zpět
+          await window.storage.set(logKey, {
+            count: request.count,
+            price: request.price,
+            coffeeName: request.coffeeName,
+            timestamp,
+            returnedFrom: request.recipientName
+          });
+          
+          const currentMonth = this.getCurrentMonth();
+          const senderRef = doc(db, 'storage', `user_${request.senderId}`);
+          const senderDoc = await getDoc(senderRef);
+          
+          if (senderDoc.exists()) {
+            const senderData = senderDoc.data().value;
+            await updateDoc(senderRef, {
+              allTimeCount: increment(request.count),
+              monthlyTotal: increment(request.count),
+              [`monthly_${currentMonth}`]: increment(request.count),
+              value: {
+                ...senderData,
+                allTimeCount: (senderData.allTimeCount || 0) + request.count,
+                monthlyTotal: (senderData.monthlyTotal || 0) + request.count
+              }
+            });
+          }
+          
+          // Smazat request
+          await deleteDoc(doc(db, 'pendingCoffeeRequests', request.id));
+          
+          await this.loadPendingRequests();
+          
+          alert(`Káva vrácena uživateli ${request.senderName}`);
+          this.render();
+        } catch (e) {
+          console.error('Chyba při odmítání žádosti:', e);
+          alert('Nepodařilo se odmítnout žádost');
+        }
+      }
+
+      async confirmPayment() {
+        const s = this.state;
+        const amount = s.monthlyTotal * s.coffeePrice;
+        const currentMonth = this.getCurrentMonth();
+        
+        if (!confirm(`Potvrzuješ úhradu ${amount} Kč za ${s.monthlyTotal} káv?`)) return;
+        
+        try {
+          const userRef = doc(db, 'storage', `user_${s.userId}`);
+          await updateDoc(userRef, {
+            monthlyTotal: 0,
+            [`monthly_${currentMonth}`]: 0,
+            value: {
+              name: s.userName,
+              email: s.userEmail,
+              allTimeCount: s.coffeeCount,
+              monthlyTotal: 0
+            }
+          });
+          
+          await this.loadUserData(s.userId);
+          alert('Zaplaceno! ✅');
+          this.render();
+        } catch (e) {
+          console.error('Chyba:', e);
+          alert('Nepodařilo se potvrdit platbu');
+        }
+      }
+
+      async updatePrice() {
+        const s = this.state;
+        const newPrice = parseInt(s.newPrice);
+        if (!newPrice || newPrice < 1) {
+          alert('Zadej platnou cenu');
+          return;
+        }
+        
+        try {
+          await window.storage.set('coffeePrice', newPrice);
+          
+          if (s.newCoffeeName.trim()) {
+            await window.storage.set('coffeeName', s.newCoffeeName.trim());
+          }
+          
+          await this.loadUserData(s.userId);
+          alert('Uloženo! ✅');
+          this.render();
+        } catch (e) {
+          console.error('Chyba:', e);
+          alert('Nepodařilo se uložit');
+        }
+      }
+
+      async createUser() {
+        const s = this.state;
+        if (!s.newUserName || !s.newUserEmail || !s.newUserPassword) {
+          alert('Vyplň všechna pole');
+          return;
+        }
+        
+        const uid = prompt('Vlož UID z Firebase Console:');
+        if (!uid) return;
+        
+        try {
+          await window.storage.set(`user_${uid}`, {
+            name: s.newUserName,
+            email: s.newUserEmail,
+            allTimeCount: 0,
+            monthlyTotal: 0
+          });
+          
+          s.newUserName = '';
+          s.newUserEmail = '';
+          s.newUserPassword = '';
+          
+          await this.loadUsers();
+          alert('Uživatel vytvořen! ✅');
+          this.render();
+        } catch (e) {
+          console.error('Chyba:', e);
+          alert('Nepodařilo se vytvořit uživatele');
+        }
+      }
+
       render() {
-        const el = document.getElementById('app');
-        el.innerHTML = this[`render${this.state.view.charAt(0).toUpperCase() + this.state.view.slice(1)}`]();
+        const s = this.state;
+        const root = document.getElementById('app');
+        
+        let html = '';
+        if (s.view === 'login') html = this.renderLogin();
+        else if (s.view === 'main') html = this.renderMain();
+        else if (s.view === 'alltimelog') html = this.renderAllTimeLog();
+        else if (s.view === 'monthlylog') html = this.renderMonthlyLog();
+        else if (s.view === 'admin') html = this.renderAdmin();
+        
+        // NOVÉ: Přidat modal pro výběr uživatele
+        if (s.showUserSelectModal) {
+          html += this.renderUserSelectModal();
+        }
+        
+        root.innerHTML = html;
         this.attachListeners();
       }
 
       renderLogin() {
         return `
           <div class="min-h-screen bg-gradient-to-br from-amber-50 to-orange-100 flex items-center justify-center p-4">
-            <div class="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full">
-              <div class="text-6xl text-center mb-6">☕</div>
-              <h2 class="text-2xl font-bold text-gray-800 mb-2 text-center">Coffee Tracker</h2>
-              <p class="text-gray-600 mb-6 text-center">Přihlášení</p>
-              
-              <div class="mb-4">
-                <label class="block text-sm font-semibold text-gray-700 mb-2">Email</label>
-                <input type="email" id="loginEmail" placeholder="tvuj@email.cz" 
-                  class="w-full px-4 py-3 border-2 rounded-xl text-lg outline-none focus:border-amber-500">
+            <div class="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
+              <div class="text-center mb-8">
+                <div class="text-6xl mb-4">☕</div>
+                <h1 class="text-3xl font-bold text-amber-800">Coffee Tracker</h1>
               </div>
-              
-              <div class="mb-6">
-                <label class="block text-sm font-semibold text-gray-700 mb-2">Heslo</label>
-                <input type="password" id="loginPassword" placeholder="••••••••" 
-                  class="w-full px-4 py-3 border-2 rounded-xl text-lg outline-none focus:border-amber-500">
+              <div class="space-y-4">
+                <div>
+                  <label class="block text-sm font-semibold mb-2 text-gray-700">Email</label>
+                  <input type="email" id="loginEmail" value="${this.state.loginEmail}" 
+                    class="w-full px-4 py-3 border-2 rounded-xl text-lg outline-none focus:border-amber-500" 
+                    placeholder="tvuj@email.cz">
+                </div>
+                <div>
+                  <label class="block text-sm font-semibold mb-2 text-gray-700">Heslo</label>
+                  <input type="password" id="loginPassword" value="${this.state.loginPassword}" 
+                    class="w-full px-4 py-3 border-2 rounded-xl text-lg outline-none focus:border-amber-500" 
+                    placeholder="••••••••">
+                </div>
+                <button id="loginBtn" class="w-full bg-amber-600 text-white py-4 rounded-xl font-bold text-lg hover:bg-amber-700 transition">
+                  Přihlásit se
+                </button>
               </div>
-              
-              <button id="loginBtn" class="w-full bg-blue-600 text-white py-3 rounded-xl font-semibold hover:bg-blue-700 mb-3">
-                🔐 Přihlásit se
-              </button>
-
-              <p class="text-xs text-gray-500 text-center mt-4">
-                Nemáš přihlašovací údaje? Požádej admina o vytvoření účtu.
-              </p>
             </div>
           </div>
         `;
@@ -465,193 +616,309 @@
 
       renderMain() {
         const s = this.state;
-        const firstDay = this.isFirstDay();
+        const amount = s.monthlyTotal * s.coffeePrice;
+        const isFirstDayOfMonth = this.isFirstDay();
+        
+        return `
+          <div class="min-h-screen bg-gradient-to-br from-amber-50 to-orange-100">
+            ${this.renderPendingRequestsBanner()}
+            
+            <div class="bg-white shadow-md">
+              <div class="max-w-4xl mx-auto px-4 py-4 flex justify-between items-center">
+                <div>
+                  <h1 class="text-2xl font-bold text-amber-800">Ahoj, ${s.userName}! ☕</h1>
+                  <p class="text-sm text-gray-600">${s.userEmail}</p>
+                </div>
+                <button id="logoutBtn" class="text-gray-600 hover:text-gray-800 font-semibold">Odhlásit</button>
+              </div>
+            </div>
+
+            <div class="max-w-4xl mx-auto p-4 space-y-4">
+              <div class="bg-white rounded-2xl shadow-lg p-6">
+                <div class="text-center mb-6">
+                  <div class="text-7xl mb-2">☕</div>
+                  ${s.coffeeName ? `<p class="text-lg font-semibold text-amber-700 mb-2">☕ ${s.coffeeName}</p>` : ''}
+                  <p class="text-5xl font-bold text-amber-800 mb-2">${s.monthlyTotal}</p>
+                  <p class="text-gray-600">káv tento měsíc</p>
+                  <p class="text-2xl font-bold text-amber-600 mt-4">${amount} Kč</p>
+                  <p class="text-sm text-gray-500">@ ${s.coffeePrice} Kč/káva</p>
+                  <p class="text-sm text-gray-500 mt-2">Celkem: ${s.coffeeCount} káv</p>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3 mb-4">
+                  <button id="add1" class="bg-amber-500 text-white py-4 rounded-xl font-bold text-xl hover:bg-amber-600 transition">
+                    + 1 ☕
+                  </button>
+                  <button id="add2" class="bg-amber-600 text-white py-4 rounded-xl font-bold text-xl hover:bg-amber-700 transition">
+                    + 2 ☕
+                  </button>
+                </div>
+
+                <div class="flex gap-3 mb-4">
+                  <input type="number" id="custom" min="1" placeholder="Vlastní počet" value="${s.customCount}"
+                    class="flex-1 px-4 py-3 border-2 rounded-xl text-lg outline-none focus:border-amber-500">
+                  <button id="addCustom" class="bg-amber-700 text-white px-6 py-3 rounded-xl font-bold hover:bg-amber-800 transition">
+                    Přidat
+                  </button>
+                </div>
+
+                <button id="giftCoffee" class="w-full bg-blue-600 text-white py-3 rounded-xl font-semibold hover:bg-blue-700 transition mb-4">
+                  🎁 Kafe pro kolegu
+                </button>
+
+                ${isFirstDayOfMonth && s.monthlyTotal > 0 ? `
+                  <div class="bg-green-50 border-2 border-green-200 rounded-xl p-4 mb-4">
+                    <p class="text-green-800 font-bold mb-2">💳 Platba za minulý měsíc</p>
+                    <p class="text-green-700 mb-3">Na účet: <span class="font-mono font-bold">${BANK_ACCOUNT}</span></p>
+                    <button id="payBtn" class="w-full bg-green-600 text-white py-3 rounded-xl font-bold hover:bg-green-700">
+                      ✅ Zaplatil jsem ${amount} Kč
+                    </button>
+                  </div>
+                ` : ''}
+              </div>
+
+              <div class="grid grid-cols-2 gap-3">
+                <button id="allLog" class="bg-white rounded-xl shadow-lg p-4 hover:shadow-xl transition">
+                  <p class="text-2xl mb-1">📊</p>
+                  <p class="font-bold text-gray-800">Vše</p>
+                  <p class="text-sm text-gray-600">${s.allTimeLogs.length} záznamů</p>
+                </button>
+                <button id="monthLog" class="bg-white rounded-xl shadow-lg p-4 hover:shadow-xl transition">
+                  <p class="text-2xl mb-1">📅</p>
+                  <p class="font-bold text-gray-800">Tento měsíc</p>
+                  <p class="text-sm text-gray-600">${s.monthlyLogs.length} záznamů</p>
+                </button>
+              </div>
+
+              ${s.isAdmin ? `
+                <button id="adminBtn" class="w-full bg-purple-600 text-white py-4 rounded-xl font-bold hover:bg-purple-700 transition">
+                  👑 Admin Panel
+                </button>
+              ` : ''}
+            </div>
+          </div>
+        `;
+      }
+
+      // NOVÉ: Banner s pending requesty
+      renderPendingRequestsBanner() {
+        const s = this.state;
+        if (s.pendingRequests.length === 0) return '';
+        
+        return s.pendingRequests.map(req => `
+          <div class="bg-blue-50 border-b-2 border-blue-200">
+            <div class="max-w-4xl mx-auto px-4 py-4">
+              <div class="flex items-center justify-between gap-4">
+                <div class="flex-1">
+                  <p class="font-bold text-blue-900 mb-1">
+                    🎁 Uživatel <span class="text-blue-600">${req.senderName}</span> ti přidal ${req.count > 1 ? `${req.count} kávy` : 'kávu'}
+                  </p>
+                  <p class="text-sm text-blue-700">
+                    ${req.coffeeName ? `☕ ${req.coffeeName} • ` : ''}${req.count * req.price} Kč
+                  </p>
+                  <p class="text-xs text-blue-600 mt-1">
+                    Potvrď připsání káv na tvůj účet nebo odmítni a káva bude připsána uživateli ${req.senderName}
+                  </p>
+                </div>
+                <div class="flex gap-2">
+                  <button data-accept-request="${req.id}" class="bg-green-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-green-700 transition whitespace-nowrap">
+                    OK!
+                  </button>
+                  <button data-reject-request="${req.id}" class="bg-red-600 text-white px-6 py-3 rounded-lg font-bold hover:bg-red-700 transition whitespace-nowrap">
+                    NOT OK!
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      // NOVÉ: Modal pro výběr uživatele
+      renderUserSelectModal() {
+        const s = this.state;
+        
+        // Načíst všechny uživatele kromě aktuálního
+        const otherUsers = s.allUsers.filter(u => u.uid !== s.userId);
+        
+        return `
+          <div class="modal-backdrop">
+            <div class="modal-content">
+              <div class="p-6">
+                <div class="flex justify-between items-center mb-4">
+                  <h2 class="text-xl font-bold">Vyberte uživatele</h2>
+                  <button id="closeModal" class="text-2xl text-gray-600 hover:text-gray-800">&times;</button>
+                </div>
+                
+                <div class="mb-4">
+                  <label class="block text-sm font-semibold mb-2">Počet káv</label>
+                  <input type="number" id="giftCount" value="${s.giftCoffeeCount}" min="1"
+                    class="w-full px-4 py-3 border-2 rounded-xl text-lg outline-none focus:border-amber-500">
+                </div>
+                
+                <div class="space-y-2 max-h-96 overflow-y-auto">
+                  ${otherUsers.length > 0 ? otherUsers.map(u => `
+                    <button data-select-user="${u.uid}" data-user-name="${u.name}" 
+                      class="w-full text-left p-4 bg-gray-50 hover:bg-amber-50 rounded-lg transition border-2 border-transparent hover:border-amber-300">
+                      <p class="font-semibold text-gray-800">${u.name}</p>
+                      <p class="text-sm text-gray-600">${u.email}</p>
+                    </button>
+                  `).join('') : `
+                    <p class="text-gray-500 text-center py-8">Načítání uživatelů...</p>
+                  `}
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      renderAllTimeLog() {
+        const s = this.state;
+        const grouped = this.groupLogsByHierarchy(s.allTimeLogs);
+        const years = Object.keys(grouped).sort((a, b) => b - a);
+        
         return `
           <div class="min-h-screen bg-gradient-to-br from-amber-50 to-orange-100">
             <div class="bg-white shadow-md">
               <div class="max-w-4xl mx-auto px-4 py-4 flex justify-between items-center">
                 <div class="flex items-center gap-3">
-                  <div class="text-3xl">☕</div>
-                  <div><h1 class="text-xl font-bold">Coffee Tracker</h1><p class="text-sm text-gray-600">${s.userName}</p></div>
+                  <button id="back" class="text-gray-600 hover:text-gray-800">◀️</button>
+                  <h1 class="text-xl font-bold">Kompletní historie</h1>
                 </div>
-                <div class="flex gap-2">
-                  ${s.isAdmin ? '<button id="adminBtn" class="text-gray-400 hover:text-gray-600 p-2">⚙️</button>' : ''}
-                  <button id="logoutBtn" class="text-gray-400 hover:text-red-600 p-2">🚪</button>
-                </div>
-              </div>
-            </div>
-            <div class="max-w-4xl mx-auto p-4 space-y-4">
-              <div class="grid grid-cols-2 gap-4">
-                <button id="allLog" class="bg-white rounded-2xl shadow-lg p-6 text-left hover:shadow-xl">
-                  <div class="flex items-center gap-2 mb-2"><span>📈</span><span class="text-sm text-gray-600">Celkem káv</span></div>
-                  <p class="text-4xl font-bold">${s.coffeeCount}</p>
-                </button>
-                <button id="monthLog" class="bg-white rounded-2xl shadow-lg p-6 text-left hover:shadow-xl">
-                  <div class="flex items-center gap-2 mb-2"><span>☕</span><span class="text-sm text-gray-600">Tento měsíc</span></div>
-                  <p class="text-4xl font-bold text-amber-600">${s.monthlyTotal}</p>
-                </button>
-              </div>
-              ${!firstDay || s.monthlyTotal === 0 ? `
-                <div class="bg-white rounded-2xl shadow-lg p-6">
-                  <h2 class="text-lg font-bold mb-4">Přidat kávu</h2>
-                  ${s.coffeeName ? `<p class="text-sm text-amber-600 mb-3">☕ ${s.coffeeName}</p>` : ''}
-                  <div class="flex gap-3 mb-4">
-                    <button id="add1" class="flex-1 bg-amber-500 text-white py-4 rounded-xl font-bold text-xl hover:bg-amber-600">➕ Single</button>
-                    <button id="add2" class="flex-1 bg-amber-600 text-white py-4 rounded-xl font-bold text-xl hover:bg-amber-700">➕ Double</button>
-                  </div>
-                  <div class="flex gap-3">
-                    <input type="number" id="custom" min="1" placeholder="Vlastní počet" class="flex-1 px-4 py-3 border-2 rounded-xl text-lg outline-none focus:border-amber-500">
-                    <button id="addCustom" class="bg-gray-800 text-white px-6 py-3 rounded-xl font-semibold hover:bg-gray-900">Přidat</button>
-                  </div>
-                </div>
-              ` : ''}
-              ${firstDay && s.monthlyTotal > 0 ? `
-                <div class="bg-gradient-to-br from-green-50 to-emerald-100 rounded-2xl shadow-lg p-6 border-2 border-green-200">
-                  <h2 class="text-lg font-bold mb-4">Měsíční účet</h2>
-                  <div class="space-y-3 mb-4">
-                    <div class="flex justify-between text-gray-700"><span>Počet káv:</span><span class="font-bold">${s.monthlyTotal}</span></div>
-                    <div class="flex justify-between text-gray-700"><span>Cena:</span><span class="font-bold">${s.coffeePrice} Kč</span></div>
-                    <div class="h-px bg-gray-300"></div>
-                    <div class="flex justify-between text-xl font-bold"><span>Celkem:</span><span class="text-green-600">${s.monthlyTotal * s.coffeePrice} Kč</span></div>
-                  </div>
-                  <div class="bg-white rounded-xl p-4 mb-4">
-                    <p class="text-sm text-gray-600 mb-1">Číslo účtu:</p>
-                    <p class="text-lg font-mono font-bold">${BANK_ACCOUNT}</p>
-                  </div>
-                  <button id="payBtn" class="w-full bg-green-600 text-white py-3 rounded-xl font-bold hover:bg-green-700">✅ Zaplaceno</button>
-                </div>
-                <div class="bg-red-50 rounded-xl p-4 text-sm text-red-700 border-2 border-red-200">
-                  <p class="font-bold mb-1">⚠️ Nový měsíc - Platba nutná</p>
-                  <p>Potvrď platbu za minulý měsíc.</p>
-                </div>
-              ` : ''}
-              <div class="bg-green-50 rounded-xl p-4 text-sm border-2 border-green-200">
-                <p class="text-green-700">🔐 <strong>Zabezpečeno:</strong> Přihlášen jako ${s.userEmail}</p>
-              </div>
-            </div>
-          </div>
-        `;
-      }
-
-      renderAlltimelog() {
-        const grouped = this.groupLogsByHierarchy(this.state.allTimeLogs);
-        const years = Object.keys(grouped).sort((a, b) => b - a);
-
-        return `
-          <div class="min-h-screen bg-gradient-to-br from-amber-50 to-orange-100">
-            <div class="bg-white shadow-md">
-              <div class="max-w-4xl mx-auto px-4 py-4 flex items-center gap-3">
-                <button id="back" class="text-gray-600 hover:text-gray-800">◀️</button>
-                <div><h1 class="text-xl font-bold">Historie - Celkem</h1><p class="text-sm text-gray-600">${this.state.coffeeCount} káv</p></div>
               </div>
             </div>
             <div class="max-w-4xl mx-auto p-4">
               <div class="bg-white rounded-2xl shadow-lg p-6">
-                ${years.length > 0 ? `<div class="space-y-2">
-                  ${years.map(year => {
-                    const yearData = grouped[year];
-                    const isExpanded = this.state.expandedYears.has(year);
-                    return `
-                      <div class="border-2 border-gray-200 rounded-lg">
-                        <button class="w-full p-4 flex justify-between items-center hover:bg-gray-50" data-toggle-year="${year}">
-                          <div class="flex items-center gap-3">
-                            <span class="text-2xl">${isExpanded ? '📂' : '📁'}</span>
-                            <div>
-                              <p class="font-bold text-lg">${year}</p>
-                              <p class="text-sm text-gray-600">${yearData.count} káv</p>
-                            </div>
-                          </div>
-                          <div class="text-right">
-                            <p class="font-bold text-amber-600">${yearData.total} Kč</p>
-                          </div>
-                        </button>
-                        ${isExpanded ? `<div class="px-4 pb-4 space-y-2">
-                          ${Object.keys(yearData.months).sort((a, b) => b.localeCompare(a)).map(month => {
+                ${years.length > 0 ? years.map(year => {
+                  const yearData = grouped[year];
+                  const isExpanded = s.expandedYears.has(year);
+                  const months = Object.keys(yearData.months).sort((a, b) => b.localeCompare(a));
+                  
+                  return `
+                    <div class="mb-3">
+                      <button data-toggle-year="${year}" 
+                        class="w-full flex justify-between items-center p-4 bg-amber-100 hover:bg-amber-200 rounded-xl transition">
+                        <span class="font-bold text-lg">${isExpanded ? '▼' : '▶'} ${year}</span>
+                        <div class="text-right">
+                          <p class="font-bold text-amber-700">${yearData.count} káv</p>
+                          <p class="text-sm text-amber-600">${yearData.total} Kč</p>
+                        </div>
+                      </button>
+                      
+                      ${isExpanded ? `
+                        <div class="ml-4 mt-2 space-y-2">
+                          ${months.map(month => {
                             const monthData = yearData.months[month];
-                            const isMonthExpanded = this.state.expandedMonths.has(month);
+                            const isMonthExpanded = s.expandedMonths.has(month);
+                            const weeks = Object.keys(monthData.weeks).sort((a, b) => b.localeCompare(a));
                             const monthName = new Date(month + '-01').toLocaleDateString('cs-CZ', { month: 'long', year: 'numeric' });
+                            
                             return `
-                              <div class="border-l-4 border-amber-300 ml-4">
-                                <button class="w-full p-3 flex justify-between items-center hover:bg-gray-50" data-toggle-month="${month}">
-                                  <div class="flex items-center gap-2">
-                                    <span>${isMonthExpanded ? '📂' : '📁'}</span>
-                                    <div>
-                                      <p class="font-semibold">${monthName}</p>
-                                      <p class="text-xs text-gray-600">${monthData.count} káv</p>
-                                    </div>
+                              <div>
+                                <button data-toggle-month="${month}"
+                                  class="w-full flex justify-between items-center p-3 bg-amber-50 hover:bg-amber-100 rounded-lg transition">
+                                  <span class="font-semibold">${isMonthExpanded ? '▼' : '▶'} ${monthName}</span>
+                                  <div class="text-right">
+                                    <p class="font-bold text-amber-600">${monthData.count} káv</p>
+                                    <p class="text-xs text-amber-500">${monthData.total} Kč</p>
                                   </div>
-                                  <p class="font-bold text-amber-600">${monthData.total} Kč</p>
                                 </button>
-                                ${isMonthExpanded ? `<div class="px-3 pb-3 space-y-2">
-                                  ${Object.keys(monthData.weeks).sort((a, b) => b.localeCompare(a)).map(week => {
-                                    const weekData = monthData.weeks[week];
-                                    const isWeekExpanded = this.state.expandedWeeks.has(week);
-                                    return `
-                                      <div class="border-l-4 border-blue-200 ml-4">
-                                        <button class="w-full p-2 flex justify-between items-center hover:bg-gray-50 text-sm" data-toggle-week="${week}">
-                                          <div class="flex items-center gap-2">
-                                            <span>${isWeekExpanded ? '📂' : '📁'}</span>
-                                            <div>
-                                              <p class="font-semibold">Týden ${week.split('-W')[1]}</p>
-                                              <p class="text-xs text-gray-600">${weekData.count} káv</p>
+                                
+                                ${isMonthExpanded ? `
+                                  <div class="ml-4 mt-2 space-y-2">
+                                    ${weeks.map(week => {
+                                      const weekData = monthData.weeks[week];
+                                      const isWeekExpanded = s.expandedWeeks.has(week);
+                                      const days = Object.keys(weekData.days).sort((a, b) => b.localeCompare(a));
+                                      
+                                      return `
+                                        <div>
+                                          <button data-toggle-week="${week}"
+                                            class="w-full flex justify-between items-center p-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition">
+                                            <span class="text-sm font-semibold">${isWeekExpanded ? '▼' : '▶'} Týden ${week.split('-W')[1]}</span>
+                                            <div class="text-right">
+                                              <p class="text-sm font-bold text-gray-700">${weekData.count} káv</p>
+                                              <p class="text-xs text-gray-500">${weekData.total} Kč</p>
                                             </div>
-                                          </div>
-                                          <p class="font-bold text-amber-600 text-sm">${weekData.total} Kč</p>
-                                        </button>
-                                        ${isWeekExpanded ? `<div class="px-2 pb-2 space-y-1">
-                                          ${Object.keys(weekData.days).sort((a, b) => b.localeCompare(a)).map(day => {
-                                            const dayData = weekData.days[day];
-                                            return `
-                                              <div class="ml-4 border-l-4 border-green-200 pl-3">
-                                                <p class="text-sm font-semibold text-gray-700">${this.formatDateShort(day)} - ${dayData.count} káv (${dayData.total} Kč)</p>
-                                                <div class="ml-2 space-y-1 mt-1">
-                                                  ${dayData.logs.map(log => `
-                                                    <div class="text-xs p-2 bg-gray-50 rounded">
-                                                      <span class="font-semibold">${log.count}x káva</span>
-                                                      ${log.coffeeName ? `<span class="text-amber-600"> • ${log.coffeeName}</span>` : ''}
-                                                      <span class="text-gray-500"> • ${new Date(log.timestamp).toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit' })}</span>
-                                                      <span class="text-amber-600 float-right">${log.count * log.price} Kč</span>
+                                          </button>
+                                          
+                                          ${isWeekExpanded ? `
+                                            <div class="ml-4 mt-2 space-y-2">
+                                              ${days.map(day => {
+                                                const dayData = weekData.days[day];
+                                                const dayName = new Date(day).toLocaleDateString('cs-CZ', { weekday: 'short', day: 'numeric', month: 'numeric' });
+                                                
+                                                return `
+                                                  <div class="bg-white rounded-lg p-3 border-2 border-gray-100">
+                                                    <div class="flex justify-between items-center mb-2">
+                                                      <span class="text-sm font-semibold text-gray-700">${dayName}</span>
+                                                      <div class="text-right">
+                                                        <p class="text-sm font-bold text-gray-700">${dayData.count} káv</p>
+                                                        <p class="text-xs text-gray-500">${dayData.total} Kč</p>
+                                                      </div>
                                                     </div>
-                                                  `).join('')}
-                                                </div>
-                                              </div>
-                                            `;
-                                          }).join('')}
-                                        </div>` : ''}
-                                      </div>
-                                    `;
-                                  }).join('')}
-                                </div>` : ''}
+                                                    <div class="space-y-1">
+                                                      ${dayData.logs.map(log => `
+                                                        <div class="flex justify-between items-center text-xs p-2 bg-gray-50 rounded">
+                                                          <div>
+                                                            <span class="font-semibold">${log.count}x</span>
+                                                            ${log.coffeeName ? `<span class="text-amber-600">☕ ${log.coffeeName}</span>` : ''}
+                                                            ${log.giftFrom ? `<span class="text-blue-600">🎁 od ${log.giftFrom}</span>` : ''}
+                                                            <span class="text-gray-500">${new Date(log.timestamp).toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit' })}</span>
+                                                          </div>
+                                                          <span class="font-bold text-amber-600">${log.count * log.price} Kč</span>
+                                                        </div>
+                                                      `).join('')}
+                                                    </div>
+                                                  </div>
+                                                `;
+                                              }).join('')}
+                                            </div>
+                                          ` : ''}
+                                        </div>
+                                      `;
+                                    }).join('')}
+                                  </div>
+                                ` : ''}
                               </div>
                             `;
                           }).join('')}
-                        </div>` : ''}
-                      </div>
-                    `;
-                  }).join('')}
-                </div>` : '<p class="text-gray-500 text-center py-8">Zatím žádné záznamy</p>'}
+                        </div>
+                      ` : ''}
+                    </div>
+                  `;
+                }).join('') : '<p class="text-gray-500 text-center py-8">Žádné záznamy</p>'}
               </div>
             </div>
           </div>
         `;
       }
 
-      renderMonthlylog() {
+      renderMonthlyLog() {
+        const s = this.state;
         return `
           <div class="min-h-screen bg-gradient-to-br from-amber-50 to-orange-100">
             <div class="bg-white shadow-md">
-              <div class="max-w-4xl mx-auto px-4 py-4 flex items-center gap-3">
-                <button id="back" class="text-gray-600 hover:text-gray-800">◀️</button>
-                <div><h1 class="text-xl font-bold">Historie - Tento měsíc</h1><p class="text-sm text-gray-600">${this.state.monthlyTotal} káv</p></div>
+              <div class="max-w-4xl mx-auto px-4 py-4 flex justify-between items-center">
+                <div class="flex items-center gap-3">
+                  <button id="back" class="text-gray-600 hover:text-gray-800">◀️</button>
+                  <h1 class="text-xl font-bold">Tento měsíc</h1>
+                </div>
               </div>
             </div>
             <div class="max-w-4xl mx-auto p-4">
               <div class="bg-white rounded-2xl shadow-lg p-6">
-                ${this.state.monthlyLogs.length > 0 ? `<div class="space-y-2">${this.state.monthlyLogs.map(log => `
-                  <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                <div class="text-center mb-6">
+                  <p class="text-4xl font-bold text-amber-800 mb-2">${s.monthlyTotal} káv</p>
+                  <p class="text-2xl font-bold text-amber-600">${s.monthlyTotal * s.coffeePrice} Kč</p>
+                </div>
+                ${s.monthlyLogs.length > 0 ? `<div class="space-y-3">${s.monthlyLogs.map(log => `
+                  <div class="flex justify-between items-center p-4 bg-amber-50 rounded-xl">
                     <div>
                       <p class="font-semibold">${log.count}x káva</p>
                       ${log.coffeeName ? `<p class="text-sm text-amber-600">☕ ${log.coffeeName}</p>` : ''}
+                      ${log.giftFrom ? `<p class="text-sm text-blue-600">🎁 Dárek od ${log.giftFrom}</p>` : ''}
                       <p class="text-sm text-gray-600">${this.formatDate(log.timestamp)}</p>
                     </div>
                     <div class="text-right">
@@ -705,7 +972,7 @@
                   <p class="font-bold text-yellow-800 mb-1">⚠️ Postup:</p>
                   <ol class="text-yellow-700 list-decimal ml-4 space-y-1">
                     <li>Vyplň údaje níže</li>
-                    <li>Vytvoř uživatele v Firebase Console</li>
+                    <li>Vytvoř uživatele v Firebase Console (Authentication → Add user)</li>
                     <li>Zkopíruj UID z Firebase</li>
                     <li>Klikni "Vytvořit" a vlož UID</li>
                   </ol>
@@ -717,7 +984,7 @@
                 </div>
                 <div class="mb-3">
                   <label class="block text-sm font-semibold mb-2">Email</label>
-                  <input type="email" id="newUserEmail" value="${s.newUserEmail}" placeholder="jan@coffee.app" 
+                  <input type="email" id="newUserEmail" value="${s.newUserEmail}" placeholder="jan@firma.cz" 
                     class="w-full px-4 py-3 border-2 rounded-xl text-lg outline-none focus:border-amber-500">
                 </div>
                 <div class="mb-4">
@@ -781,7 +1048,58 @@
             if (val > 0) this.addCoffee(val);
           });
           document.getElementById('payBtn')?.addEventListener('click', () => this.confirmPayment());
-          document.getElementById('adminBtn')?.addEventListener('click', () => { s.view = 'admin'; this.render(); });
+          document.getElementById('adminBtn')?.addEventListener('click', () => { 
+            s.view = 'admin'; 
+            this.loadUsers().then(() => this.render());
+          });
+
+          // NOVÉ: Tlačítko pro otevření modalu
+          document.getElementById('giftCoffee')?.addEventListener('click', async () => {
+            await this.loadUsers();
+            s.showUserSelectModal = true;
+            this.render();
+          });
+
+          // NOVÉ: Tlačítka pro přijímání/odmítání requestů
+          document.querySelectorAll('[data-accept-request]').forEach(btn => {
+            btn.addEventListener('click', () => {
+              const requestId = btn.dataset.acceptRequest;
+              const request = s.pendingRequests.find(r => r.id === requestId);
+              if (request) this.acceptCoffeeRequest(request);
+            });
+          });
+
+          document.querySelectorAll('[data-reject-request]').forEach(btn => {
+            btn.addEventListener('click', () => {
+              const requestId = btn.dataset.rejectRequest;
+              const request = s.pendingRequests.find(r => r.id === requestId);
+              if (request) this.rejectCoffeeRequest(request);
+            });
+          });
+        }
+
+        // NOVÉ: Event listenery pro modal
+        if (s.showUserSelectModal) {
+          document.getElementById('closeModal')?.addEventListener('click', () => {
+            s.showUserSelectModal = false;
+            this.render();
+          });
+
+          document.getElementById('giftCount')?.addEventListener('input', (e) => {
+            s.giftCoffeeCount = parseInt(e.target.value) || 1;
+          });
+
+          document.querySelectorAll('[data-select-user]').forEach(btn => {
+            btn.addEventListener('click', () => {
+              const userId = btn.dataset.selectUser;
+              const userName = btn.dataset.userName;
+              const count = parseInt(document.getElementById('giftCount').value) || 1;
+              
+              if (confirm(`Přidat ${count}x káva pro uživatele ${userName}?`)) {
+                this.sendCoffeeRequest(userId, userName, count);
+              }
+            });
+          });
         }
 
         if (s.view === 'alltimelog') {
