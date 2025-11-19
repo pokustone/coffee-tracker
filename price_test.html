@@ -505,7 +505,17 @@ async userLogin() {
                 <div class="flex gap-2">
                   ${s.isAdmin ? '<button id="adminBtn" class="text-gray-400 hover:text-gray-600 p-2">⚙️</button>' : ''}
                   <button id="logoutBtn" class="text-gray-400 hover:text-red-600 p-2">🚪</button>
-                  <button onclick="enableNotifications()">🔔 Notifikace</button>
+                  <button onclick="showSettings()">⚙️ Nastavení</button>
+
+<div id="settingsModal" style="display: none;">
+  <!-- Tvoje stávající nastavení -->
+  
+  <hr>
+  <h3>Notifikace</h3>
+  <button onclick="enableNotifications()">
+    🔔 Povolit push notifikace
+  </button>
+</div>
                 </div>
               </div>
             </div>
