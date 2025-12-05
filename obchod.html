@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ruční Výrobky - Handmade Shop</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --cream: #FFF8F0;
+            --terracotta: #D17A5F;
+            --brown: #8B6F47;
+            --dark-brown: #5D4E37;
+            --sage: #B4C5A8;
+            --soft-white: #FEFEFE;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Lato', sans-serif;
+            background: var(--cream);
+            color: var(--dark-brown);
+            line-height: 1.7;
+            overflow-x: hidden;
+        }
+
+        /* Header */
+        header {
+            background: linear-gradient(135deg, var(--terracotta), var(--brown));
+            padding: 4rem 2rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,0.03) 10px, rgba(255,255,255,0.03) 20px);
+            pointer-events: none;
+        }
+
+        h1 {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 4.5rem;
+            font-weight: 700;
+            color: var(--soft-white);
+            letter-spacing: 2px;
+            margin-bottom: 1rem;
+            position: relative;
+            animation: fadeInUp 1s ease;
+        }
+
+        .subtitle {
+            font-size: 1.3rem;
+            color: var(--cream);
+            font-weight: 300;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            animation: fadeInUp 1s ease 0.2s both;
+        }
+
+        /* Navigation */
+        nav {
+            background: var(--soft-white);
+            padding: 1.5rem 2rem;
+            box-shadow: 0 2px 20px rgba(139, 111, 71, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        nav ul {
+            display: flex;
+            justify-content: center;
+            gap: 3rem;
+            list-style: none;
+        }
+
+        nav a {
+            color: var(--dark-brown);
+            text-decoration: none;
+            font-weight: 400;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            font-size: 0.9rem;
+            position: relative;
+            transition: color 0.3s;
+        }
+
+        nav a::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: var(--terracotta);
+            transition: width 0.3s ease;
+        }
+
+        nav a:hover {
+            color: var(--terracotta);
+        }
+
+        nav a:hover::after {
+            width: 100%;
+        }
+
+        /* Main Content */
+        main {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 4rem 2rem;
+        }
+
+        section {
+            margin-bottom: 6rem;
+            animation: fadeIn 1s ease;
+        }
+
+        h2 {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 3rem;
+            color: var(--dark-brown);
+            margin-bottom: 3rem;
+            text-align: center;
+            position: relative;
+        }
+
+        h2::after {
+            content: '';
+            display: block;
+            width: 80px;
+            height: 3px;
+            background: var(--terracotta);
+            margin: 1rem auto 0;
+        }
+
+        /* Product Grid */
+        .product-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 3rem;
+            margin-top: 3rem;
+        }
+
+        .product-card {
+            background: var(--soft-white);
+            border-radius: 0;
+            overflow: hidden;
+            box-shadow: 0 5px 30px rgba(139, 111, 71, 0.15);
+            transition: transform 0.4s ease, box-shadow 0.4s ease;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .product-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 50px rgba(139, 111, 71, 0.25);
+        }
+
+        .product-image {
+            width: 100%;
+            height: 350px;
+            background: linear-gradient(135deg, var(--sage), var(--cream));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 5rem;
+            color: rgba(139, 111, 71, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .product-image::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                repeating-linear-gradient(90deg, transparent, transparent 20px, rgba(255,255,255,0.1) 20px, rgba(255,255,255,0.1) 40px);
+            pointer-events: none;
+        }
+
+        .product-info {
+            padding: 2rem;
+        }
+
+        .product-name {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.8rem;
+            font-weight: 600;
+            color: var(--dark-brown);
+            margin-bottom: 0.5rem;
+        }
+
+        .product-description {
+            color: var(--brown);
+            margin-bottom: 1.5rem;
+            font-size: 0.95rem;
+        }
+
+        .product-price {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--terracotta);
+            font-family: 'Cormorant Garamond', serif;
+        }
+
+        /* About Section */
+        .about-content {
+            max-width: 800px;
+            margin: 0 auto;
+            text-align: center;
+            font-size: 1.1rem;
+            line-height: 2;
+            color: var(--brown);
+        }
+
+        .about-content p {
+            margin-bottom: 1.5rem;
+        }
+
+        /* Contact Form */
+        .contact-form {
+            max-width: 600px;
+            margin: 0 auto;
+            background: var(--soft-white);
+            padding: 3rem;
+            box-shadow: 0 5px 30px rgba(139, 111, 71, 0.15);
+        }
+
+        .form-group {
+            margin-bottom: 2rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 400;
+            color: var(--dark-brown);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-size: 0.85rem;
+        }
+
+        input, textarea {
+            width: 100%;
+            padding: 1rem;
+            border: 2px solid var(--cream);
+            background: var(--cream);
+            color: var(--dark-brown);
+            font-family: 'Lato', sans-serif;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: var(--terracotta);
+            background: var(--soft-white);
+        }
+
+        textarea {
+            min-height: 150px;
+            resize: vertical;
+        }
+
+        button {
+            background: var(--terracotta);
+            color: var(--soft-white);
+            border: none;
+            padding: 1.2rem 3rem;
+            font-size: 1rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            font-family: 'Lato', sans-serif;
+        }
+
+        button:hover {
+            background: var(--brown);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(139, 111, 71, 0.3);
+        }
+
+        /* Footer */
+        footer {
+            background: var(--dark-brown);
+            color: var(--cream);
+            text-align: center;
+            padding: 3rem 2rem;
+            margin-top: 6rem;
+        }
+
+        footer p {
+            font-size: 0.9rem;
+            letter-spacing: 1px;
+        }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2.5rem;
+            }
+
+            .subtitle {
+                font-size: 1rem;
+            }
+
+            nav ul {
+                flex-wrap: wrap;
+                gap: 1.5rem;
+            }
+
+            h2 {
+                font-size: 2rem;
+            }
+
+            .product-grid {
+                grid-template-columns: 1fr;
+                gap: 2rem;
+            }
+
+            .contact-form {
+                padding: 2rem;
+            }
+        }
+
+        /* Success Message */
+        .success-message {
+            display: none;
+            background: var(--sage);
+            color: var(--dark-brown);
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            text-align: center;
+            font-weight: 600;
+            animation: fadeInUp 0.5s ease;
+        }
+
+        .success-message.show {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Ruční Výrobky</h1>
+        <p class="subtitle">Handmade with Love</p>
+    </header>
+
+    <nav>
+        <ul>
+            <li><a href="#produkty">Produkty</a></li>
+            <li><a href="#o-mne">O mně</a></li>
+            <li><a href="#kontakt">Kontakt</a></li>
+        </ul>
+    </nav>
+
+    <main>
+        <!-- Products Section -->
+        <section id="produkty">
+            <h2>Moje Výrobky</h2>
+            <div class="product-grid">
+                <div class="product-card">
+                    <div class="product-image">🧵</div>
+                    <div class="product-info">
+                        <h3 class="product-name">Šité tašky</h3>
+                        <p class="product-description">Ručně šité tašky z kvalitních látek. Každá taška je originál s láskou k detailu.</p>
+                        <div class="product-price">od 450 Kč</div>
+                    </div>
+                </div>
+
+                <div class="product-card">
+                    <div class="product-image">🎀</div>
+                    <div class="product-info">
+                        <h3 class="product-name">Doplňky do vlasů</h3>
+                        <p class="product-description">Stylové a originální doplňky - čelenky, gumičky, sponky.</p>
+                        <div class="product-price">od 150 Kč</div>
+                    </div>
+                </div>
+
+                <div class="product-card">
+                    <div class="product-image">🧸</div>
+                    <div class="product-info">
+                        <h3 class="product-name">Hračky pro děti</h3>
+                        <p class="product-description">Bezpečné a krásné látkové hračky pro ty nejmenší.</p>
+                        <div class="product-price">od 350 Kč</div>
+                    </div>
+                </div>
+
+                <div class="product-card">
+                    <div class="product-image">🏠</div>
+                    <div class="product-info">
+                        <h3 class="product-name">Dekorace domů</h3>
+                        <p class="product-description">Polštáře, přehozy a další textilní dekorace pro útulný domov.</p>
+                        <div class="product-price">od 600 Kč</div>
+                    </div>
+                </div>
+
+                <div class="product-card">
+                    <div class="product-image">👗</div>
+                    <div class="product-info">
+                        <h3 class="product-name">Oblečení</h3>
+                        <p class="product-description">Unikátní šaty, sukně a další kousky na míru.</p>
+                        <div class="product-price">od 1 200 Kč</div>
+                    </div>
+                </div>
+
+                <div class="product-card">
+                    <div class="product-image">🎁</div>
+                    <div class="product-info">
+                        <h3 class="product-name">Dárkové sety</h3>
+                        <p class="product-description">Krásně zabalené sety pro vaše blízké.</p>
+                        <div class="product-price">od 800 Kč</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- About Section -->
+        <section id="o-mne">
+            <h2>O mně</h2>
+            <div class="about-content">
+                <p>Vítejte v mém světě ručních výrobků! Jsem nadšená švadlena, která každý kus šije s láskou a pečlivostí.</p>
+                <p>Všechny výrobky jsou originální, vyrobené z kvalitních materiálů a s důrazem na detail. Každý kus je unikátní a může být přizpůsoben vašim přáním.</p>
+                <p>Věřím, že ruční práce má svou duši a každý výrobek přináší teplo a originalitu do vašeho života.</p>
+            </div>
+        </section>
+
+        <!-- Contact Section -->
+        <section id="kontakt">
+            <h2>Kontakt</h2>
+            <div class="contact-form">
+                <div class="success-message" id="successMessage">
+                    Děkuji za zprávu! Brzy se vám ozvu.
+                </div>
+                <form id="contactForm" onsubmit="handleSubmit(event)">
+                    <div class="form-group">
+                        <label for="name">Jméno *</label>
+                        <input type="text" id="name" name="name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="email">Email *</label>
+                        <input type="email" id="email" name="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="phone">Telefon</label>
+                        <input type="tel" id="phone" name="phone">
+                    </div>
+                    <div class="form-group">
+                        <label for="message">Zpráva *</label>
+                        <textarea id="message" name="message" required placeholder="Popište, co byste chtěli objednat nebo se zeptat..."></textarea>
+                    </div>
+                    <button type="submit">Odeslat zprávu</button>
+                </form>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2024 Ruční Výrobky. Vytvořeno s láskou.</p>
+    </footer>
+
+    <script>
+        // Smooth scrolling
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        // Form submission
+        function handleSubmit(event) {
+            event.preventDefault();
+            
+            // Show success message
+            const successMessage = document.getElementById('successMessage');
+            successMessage.classList.add('show');
+            
+            // Reset form
+            document.getElementById('contactForm').reset();
+            
+            // Hide success message after 5 seconds
+            setTimeout(() => {
+                successMessage.classList.remove('show');
+            }, 5000);
+            
+            // Scroll to success message
+            successMessage.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        // Add stagger animation to product cards
+        document.addEventListener('DOMContentLoaded', () => {
+            const cards = document.querySelectorAll('.product-card');
+            cards.forEach((card, index) => {
+                card.style.animation = `fadeInUp 0.6s ease ${index * 0.1}s both`;
+            });
+        });
+    </script>
+</body>
+</html>
